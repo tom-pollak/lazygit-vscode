@@ -33,8 +33,14 @@ function showAndFocusTerminal(terminal: vscode.Terminal) {
 }
 
 async function hideWindow() {
-    // Switch to the previous editor group
-    await vscode.commands.executeCommand('workbench.action.previousEditor');
+    const openTabs = vscode.window.tabGroups.all.flatMap(group => group.tabs).length;
+    if (openTabs == 1 && lazyGitTerminal) {
+        lazyGitTerminal.dispose();
+        lazyGitTerminal = undefined;
+        isLazyGitVisible = false;
+    } else {
+        await vscode.commands.executeCommand('workbench.action.previousEditor');
+    }
 }
 
 function findLazyGitOnPath(): Promise<string> {
