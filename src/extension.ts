@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as os from 'os';
+import { exec } from 'child_process';
 
 let lazyGitTerminal: vscode.Terminal | undefined;
 let isLazyGitVisible = false;
@@ -35,37 +37,53 @@ async function hideWindow() {
     await vscode.commands.executeCommand('workbench.action.previousEditor');
 }
 
-async function createWindow() {
-    const workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
-    if (workspaceFolder) {
-        const config = vscode.workspace.getConfiguration('lazygit-vscode');
-        let lazyGitPath = config.get<string>('lazyGitPath') || '/opt/homebrew/bin/lazygit';
+function findLazyGitOnPath(): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const command = process.platform === 'win32' ? 'where lazygit' : 'which lazygit';
+        exec(command, (error, stdout) => {
+            if (error) reject(new Error('LazyGit not found on PATH'));
+            else resolve(stdout.trim());
+        });
+    });
+}
 
-        if (!fs.existsSync(lazyGitPath)) {
-            vscode.window.showErrorMessage(`LazyGit not found at ${lazyGitPath}. Please check your settings.`);
+async function createWindow() {
+    let workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+    if (!workspaceFolder) workspaceFolder = os.homedir();
+
+    const config = vscode.workspace.getConfiguration('lazygit-vscode');
+    let lazyGitPath = config.get<string>('lazyGitPath');
+    if (!lazyGitPath) {
+        try {
+            lazyGitPath = await findLazyGitOnPath();
+        } catch (error) {
+            vscode.window.showErrorMessage('LazyGit not found in config or on PATH. Please check your settings.');
             return;
         }
-
-        lazyGitTerminal = vscode.window.createTerminal({
-            name: "LazyGit",
-            cwd: workspaceFolder,
-            shellPath: process.platform === 'win32' ? 'cmd.exe' : '/bin/bash',
-            shellArgs: process.platform === 'win32' ? ['/c', lazyGitPath] : ['-c', lazyGitPath],
-            location: vscode.TerminalLocation.Editor
-        });
-
-        showAndFocusTerminal(lazyGitTerminal);
-
-        // Monitor the terminal for closure
-        vscode.window.onDidCloseTerminal(terminal => {
-            if (terminal === lazyGitTerminal) {
-                lazyGitTerminal = undefined;
-                isLazyGitVisible = false;
-            }
-        });
-    } else {
-        vscode.window.showErrorMessage('No workspace folder found. Please open a folder and try again.');
     }
+
+    if (!fs.existsSync(lazyGitPath)) {
+        vscode.window.showErrorMessage(`LazyGit not found at ${lazyGitPath}. Please check your settings.`);
+        return;
+    }
+
+    lazyGitTerminal = vscode.window.createTerminal({
+        name: "LazyGit",
+        cwd: workspaceFolder,
+        shellPath: process.platform === 'win32' ? 'cmd.exe' : '/bin/bash',
+        shellArgs: process.platform === 'win32' ? ['/c', lazyGitPath] : ['-c', lazyGitPath],
+        location: vscode.TerminalLocation.Editor
+    });
+
+    showAndFocusTerminal(lazyGitTerminal);
+
+    // Monitor the terminal for closure
+    vscode.window.onDidCloseTerminal(terminal => {
+        if (terminal === lazyGitTerminal) {
+            lazyGitTerminal = undefined;
+            isLazyGitVisible = false;
+        }
+    });
 }
 
 export function deactivate() {
