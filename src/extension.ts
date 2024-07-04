@@ -16,7 +16,7 @@ export function activate(context: vscode.ExtensionContext) {
                 lazyGitTerminal = undefined;
             } else {
                 console.log('LazyGit terminal exists but is not visible, showing it');
-                lazyGitTerminal.show(true);
+                showAndFocusTerminal(lazyGitTerminal);
             }
         } else {
             console.log('Creating new LazyGit terminal');
@@ -29,6 +29,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 function isTerminalVisible(terminal: vscode.Terminal): boolean {
     return vscode.window.activeTerminal === terminal;
+}
+
+function showAndFocusTerminal(terminal: vscode.Terminal) {
+    terminal.show(true);
+    vscode.commands.executeCommand('workbench.action.terminal.focus');
 }
 
 async function createLazyGitTerminal() {
@@ -52,7 +57,7 @@ async function createLazyGitTerminal() {
             location: vscode.TerminalLocation.Editor
         });
 
-        lazyGitTerminal.show(true);
+        showAndFocusTerminal(lazyGitTerminal);
 
         // Monitor the terminal for closure
         vscode.window.onDidCloseTerminal(terminal => {
