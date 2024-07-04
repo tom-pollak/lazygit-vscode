@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 
 let lazyGitTerminal: vscode.Terminal | undefined;
+let isLazyGitVisible = false;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('LazyGit extension is now active!');
@@ -10,30 +11,35 @@ export function activate(context: vscode.ExtensionContext) {
         console.log('Toggle LazyGit command triggered');
 
         if (lazyGitTerminal) {
-            if (isTerminalVisible(lazyGitTerminal)) {
+            if (isLazyGitVisible) {
                 console.log('LazyGit terminal is visible, hiding it');
-                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-                lazyGitTerminal = undefined;
+                await hideTerminal();
+                isLazyGitVisible = false;
             } else {
                 console.log('LazyGit terminal exists but is not visible, showing it');
                 showAndFocusTerminal(lazyGitTerminal);
+                isLazyGitVisible = true;
             }
         } else {
             console.log('Creating new LazyGit terminal');
             await createLazyGitTerminal();
+            isLazyGitVisible = true;
         }
     });
 
     context.subscriptions.push(disposable);
 }
 
-function isTerminalVisible(terminal: vscode.Terminal): boolean {
-    return vscode.window.activeTerminal === terminal;
-}
-
 function showAndFocusTerminal(terminal: vscode.Terminal) {
     terminal.show(true);
     vscode.commands.executeCommand('workbench.action.terminal.focus');
+}
+
+async function hideTerminal() {
+    // Hide the terminal
+    await vscode.commands.executeCommand('workbench.action.closePanel');
+    // Switch to the previous editor group
+    await vscode.commands.executeCommand('workbench.action.previousEditor');
 }
 
 async function createLazyGitTerminal() {
@@ -64,6 +70,7 @@ async function createLazyGitTerminal() {
             if (terminal === lazyGitTerminal) {
                 console.log('LazyGit terminal closed');
                 lazyGitTerminal = undefined;
+                isLazyGitVisible = false;
             }
         });
     } else {
