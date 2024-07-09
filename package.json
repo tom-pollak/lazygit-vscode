@@ -28,7 +28,17 @@
         "key": "ctrl+shift+l",
         "mac": "cmd+shift+l"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Lazygit",
+      "properties": {
+        "lazygit-vscode.lazygitPath": {
+          "type": "string",
+          "description": "The path to the lazygit executable",
+          "scope": "machine"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
