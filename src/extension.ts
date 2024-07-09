@@ -13,9 +13,11 @@ export function activate(context: vscode.ExtensionContext) {
         if (isLazyGitVisible()) {
           await hideWindow();
         } else {
+          await onShown();
           showAndFocusTerminal(lazyGitTerminal);
         }
       } else {
+        await onShown();
         await createWindow();
       }
     }
@@ -38,6 +40,16 @@ async function hideWindow() {
     lazyGitTerminal = undefined;
   } else {
     await vscode.commands.executeCommand("workbench.action.previousEditor");
+  }
+}
+
+async function onShown() {
+  const config = vscode.workspace.getConfiguration("lazygit-vscode");
+  if (config.get<boolean>("autoHideSideBar")) {
+    await vscode.commands.executeCommand("workbench.action.closeSidebar");
+  }
+  if (config.get<boolean>("autoHidePanel")) {
+    await vscode.commands.executeCommand("workbench.action.closePanel");
   }
 }
 
