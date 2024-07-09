@@ -1,7 +1,7 @@
 {
   "name": "lazygit-vscode",
   "displayName": "LazyGit VSCode",
-  "description": "Native integration of LazyGit in a VSCode window (not in an integrated terminal)",
+  "description": "Native integration of LazyGit directly in a VSCode window",
   "version": "0.0.3",
   "publisher": "TomPollak",
   "engines": {
@@ -11,7 +11,7 @@
     "type": "git",
     "url": "https://github.com/tom-pollak/lazygit-vscode"
   },
-  "icon": "logo.png",
+  "icon": "media/logo.png",
   "categories": [],
   "activationEvents": [],
   "main": "./out/extension.js",
