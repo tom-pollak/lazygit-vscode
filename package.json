@@ -2,7 +2,7 @@
   "name": "lazygit-vscode",
   "displayName": "LazyGit VSCode",
   "description": "Native integration of LazyGit in a VSCode window (not in an integrated terminal)",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "TomPollak",
   "engines": {
     "vscode": "^1.85.0"
@@ -18,13 +18,13 @@
   "contributes": {
     "commands": [
       {
-        "command": "lazygit-vscode.toggleLazyGit",
-        "title": "Toggle LazyGit"
+        "command": "lazygit-vscode.toggle",
+        "title": "LazyGit: Toggle"
       }
     ],
     "keybindings": [
       {
-        "command": "lazygit-vscode.toggleLazyGit",
+        "command": "lazygit-vscode.toggle",
         "key": "ctrl+shift+l",
         "mac": "cmd+shift+l"
       }

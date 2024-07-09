@@ -8,7 +8,7 @@ let isLazyGitVisible = false;
 
 export function activate(context: vscode.ExtensionContext) {
 
-    let disposable = vscode.commands.registerCommand('lazygit-vscode.toggleLazyGit', async () => {
+    let disposable = vscode.commands.registerCommand('lazygit-vscode.toggle', async () => {
 
         if (lazyGitTerminal) {
             if (isLazyGitVisible) {
