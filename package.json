@@ -36,6 +36,16 @@
           "type": "string",
           "description": "The path to the lazygit executable",
           "scope": "machine"
+        },
+        "lazygit-vscode.autoHideSideBar": {
+          "type": "boolean",
+          "description": "Auto-hide the side bar when showing lazygit",
+          "scope": "window"
+        },
+        "lazygit-vscode.autoHidePanel": {
+          "type": "boolean",
+          "description": "Auto-hide the panel when showing lazygit",
+          "scope": "window"
         }
       }
     }
