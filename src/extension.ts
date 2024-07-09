@@ -58,7 +58,7 @@ async function createWindow() {
     if (!workspaceFolder) workspaceFolder = os.homedir();
 
     const config = vscode.workspace.getConfiguration('lazygit-vscode');
-    let lazyGitPath = config.get<string>('lazyGitPath');
+    let lazyGitPath = config.get<string>('lazygitPath');
     if (!lazyGitPath) {
         try {
             lazyGitPath = await findLazyGitOnPath();
