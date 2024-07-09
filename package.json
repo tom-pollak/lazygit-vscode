@@ -1,8 +1,9 @@
 {
   "name": "lazygit-vscode",
   "displayName": "LazyGit for VSCode",
-  "description": "Use LazyGit in a VSCode window",
   "version": "0.0.1",
+  "description": "Native integration of LazyGit in a VSCode window (not in an integrated terminal)",
+  "publisher": "tompollak",
   "engines": {
     "vscode": "^1.85.0"
   },
