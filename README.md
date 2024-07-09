@@ -1,6 +1,6 @@
 # LazyGit for VSCode
 
-This VSCode extension integrates LazyGit, a simple terminal UI for git commands, directly into your editor.
+Native integration of LazyGit directly in a VSCode window (not an integrated terminal)
 
 ## Features
 
@@ -15,12 +15,14 @@ This VSCode extension integrates LazyGit, a simple terminal UI for git commands,
 
 Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle LazyGit
 
+- `lazygit-vscode.toggle`: Toggle LazyGit
+
 ## Extension Settings
 
-This extension contributes the following settings:
-
-* `lazygit-vscode.toggleLazyGit`: Toggle LazyGit
+- `lazygit-vscode.lazygitPath`: Manually set LazyGit path. Otherwise use default system PATH.
 
 ---
 
-* [LazyGit](https://github.com/jesseduffield/lazygit)
+## For more info
+
+> [LazyGit](https://github.com/jesseduffield/lazygit)
