@@ -35,6 +35,8 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 ## Extension Settings
 
 - `lazygit-vscode.lazygitPath`: Manually set LazyGit path. Otherwise use default system PATH.
+- `lazygit-vscode.autoHideSideBar`: Auto-hide the side bar when showing lazygit.
+- `lazygit-vscode.autoHidePanel`: Auto-hide the panel when showing lazygit.
 
 ---
 
