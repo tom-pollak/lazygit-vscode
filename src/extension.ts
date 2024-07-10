@@ -36,7 +36,19 @@ function showAndFocusTerminal(terminal: vscode.Terminal) {
 }
 
 function hideTerminal(terminal: vscode.Terminal) {
-  vscode.commands.executeCommand("workbench.action.openPreviousRecentlyUsedEditor");
+  const openTabs = vscode.window.tabGroups.all.flatMap(
+    (group) => group.tabs
+  ).length;
+  if (openTabs === 1 && lazyGitTerminal) {
+    // only lazygit tab, close
+    lazyGitTerminal.dispose();
+    lazyGitTerminal = undefined;
+  } else {
+    // toggle recently used tab
+    vscode.commands.executeCommand(
+      "workbench.action.openPreviousRecentlyUsedEditor"
+    );
+  }
 }
 
 function findLazyGitOnPath(): Promise<string> {
