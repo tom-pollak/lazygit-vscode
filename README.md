@@ -2,7 +2,8 @@
 
 Native integration of LazyGit directly in a VSCode window (not an integrated terminal)
 
-https://github.com/tom-pollak/lazygit-vscode/assets/26611948/10574237-e127-4a32-956f-31bd994191eb
+https://github.com/tom-pollak/lazygit-vscode/assets/26611948/5924db82-7937-4ed9-96ad-07963af4b56e
+
 
 ## Features
 
