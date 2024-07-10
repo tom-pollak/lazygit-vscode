@@ -10,9 +10,20 @@ https://github.com/tom-pollak/lazygit-vscode/assets/26611948/10574237-e127-4a32-
 - Use a keyboard shortcut to quickly open or close LazyGit
 - Use `e` or `o` to open a file in a new tab from the lazygit window
 
+## VSCode integration
+
+I use `o` to open files in VSCode from the LazyGit window. Simply edit your lazygit config (`~/Library/Application Support/lazygit/config.yml` on mac)
+
+```
+os:
+  open: '/opt/homebrew/bin/code {{filename}}' # replace with code path
+```
+
+(you can use `e` aswell, but I prefer to use that for cli with nvim)
+
 ## Requirements
 
-- LazyGit must be installed on your system and accessible in your PATH. You can find installation instructions for LazyGit [here](https://github.com/jesseduffield/lazygit#installation).
+- LazyGit must be installed on your system and accessible in your PATH (or set with `lazygit-vscode.lazygitPath`). You can find installation instructions for LazyGit [here](https://github.com/jesseduffield/lazygit#installation).
 
 ## Usage
 
