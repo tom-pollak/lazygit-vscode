@@ -4,23 +4,15 @@ import * as os from "os";
 import { exec } from "child_process";
 
 let lazyGitTerminal: vscode.Terminal | undefined;
-let isLazyGitVisible = false;
 
 export function activate(context: vscode.ExtensionContext) {
   let disposable = vscode.commands.registerCommand(
     "lazygit-vscode.toggle",
     async () => {
       if (lazyGitTerminal) {
-        if (isLazyGitVisible) {
-          await hideWindow();
-          isLazyGitVisible = false;
-        } else {
           showAndFocusTerminal(lazyGitTerminal);
-          isLazyGitVisible = true;
-        }
       } else {
         await createWindow();
-        isLazyGitVisible = true;
       }
     }
   );
@@ -31,19 +23,6 @@ export function activate(context: vscode.ExtensionContext) {
 function showAndFocusTerminal(terminal: vscode.Terminal) {
   terminal.show(true);
   vscode.commands.executeCommand("workbench.action.terminal.focus");
-}
-
-async function hideWindow() {
-  const openTabs = vscode.window.tabGroups.all.flatMap(
-    (group) => group.tabs
-  ).length;
-  if (openTabs == 1 && lazyGitTerminal) {
-    lazyGitTerminal.dispose();
-    lazyGitTerminal = undefined;
-    isLazyGitVisible = false;
-  } else {
-    await vscode.commands.executeCommand("workbench.action.previousEditor");
-  }
 }
 
 function findLazyGitOnPath(): Promise<string> {
@@ -96,7 +75,6 @@ async function createWindow() {
   vscode.window.onDidCloseTerminal((terminal) => {
     if (terminal === lazyGitTerminal) {
       lazyGitTerminal = undefined;
-      isLazyGitVisible = false;
     }
   });
 }
