@@ -10,7 +10,11 @@ export function activate(context: vscode.ExtensionContext) {
     "lazygit-vscode.toggle",
     async () => {
       if (lazyGitTerminal) {
+        if (terminalFocused(lazyGitTerminal)) {
+          hideTerminal(lazyGitTerminal);
+        } else {
           showAndFocusTerminal(lazyGitTerminal);
+        }
       } else {
         await createWindow();
       }
@@ -20,9 +24,19 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(disposable);
 }
 
+function terminalFocused(terminal: vscode.Terminal): boolean {
+  return (
+    vscode.window.activeTextEditor === undefined &&
+    vscode.window.activeTerminal === terminal
+  );
+}
+
 function showAndFocusTerminal(terminal: vscode.Terminal) {
-  terminal.show(true);
-  vscode.commands.executeCommand("workbench.action.terminal.focus");
+  terminal.show(false); // take focus
+}
+
+function hideTerminal(terminal: vscode.Terminal) {
+  vscode.commands.executeCommand("workbench.action.openPreviousRecentlyUsedEditor");
 }
 
 function findLazyGitOnPath(): Promise<string> {
