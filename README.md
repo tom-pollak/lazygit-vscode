@@ -8,6 +8,7 @@ https://github.com/tom-pollak/lazygit-vscode/assets/26611948/10574237-e127-4a32-
 
 - Toggle LazyGit in the full-screen editor within VSCode
 - Use a keyboard shortcut to quickly open or close LazyGit
+- Use `e` or `o` to open a file in a new tab from the lazygit window
 
 ## Requirements
 
