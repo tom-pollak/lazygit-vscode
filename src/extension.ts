@@ -101,8 +101,7 @@ function hideTerminal(terminal: vscode.Terminal) {
   ).length;
   if (openTabs === 1 && lazyGitTerminal) {
     // only lazygit tab, close
-    lazyGitTerminal.dispose();
-    lazyGitTerminal = undefined;
+    closeWindow();
   } else {
     // toggle recently used tab
     vscode.commands.executeCommand(
@@ -123,6 +122,7 @@ async function onShown() {
 }
 
 async function reloadExtension() {
+  closeWindow();
   await vscode.commands.executeCommand("workbench.action.restartExtensionHost");
 }
 
@@ -170,10 +170,17 @@ async function createWindow() {
 
   vscode.window.onDidCloseTerminal((terminal) => {
     if (terminal === lazyGitTerminal) {
-      lazyGitTerminal = undefined;
-      vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
+      closeWindow();
     }
   });
+}
+
+function closeWindow() {
+  if (lazyGitTerminal) {
+    lazyGitTerminal.dispose();
+    lazyGitTerminal = undefined;
+  }
+  vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
 }
 
 export function deactivate() {}
