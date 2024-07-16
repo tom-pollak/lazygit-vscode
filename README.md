@@ -4,7 +4,6 @@ Native integration of LazyGit directly in a VSCode window (not an integrated ter
 
 https://github.com/tom-pollak/lazygit-vscode/assets/26611948/5924db82-7937-4ed9-96ad-07963af4b56e
 
-
 ## Features
 
 - Toggle LazyGit in the full-screen editor within VSCode
@@ -35,10 +34,9 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 ## Extension Settings
 
 - `lazygit-vscode.lazygitPath`: Manually set LazyGit path. Otherwise use default system PATH.
+- `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you want different behaviour between VSCode and CLI.
 - `lazygit-vscode.autoHideSideBar`: Auto-hide the side bar when showing lazygit.
 - `lazygit-vscode.autoHidePanel`: Auto-hide the panel when showing lazygit.
-
----
 
 ## For more info
 
