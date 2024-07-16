@@ -16,13 +16,12 @@ Set the following in your [LazyGit config](https://github.com/jesseduffield/lazy
 
 ```yaml
 os:
-  editPreset: 'vscode'
+  editPreset: "vscode"
 ```
 
 This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md#configuring-file-editing) experience opening windows with `e`
 
 > If you prefer to use a different tool on the cli, you can configure a custom LazyGit config for VSCode with `lazygit-vscode.configPath`
-
 
 ## Requirements
 
@@ -40,6 +39,8 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 - `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you like different behaviour between VSCode and CLI.
 - `lazygit-vscode.autoHideSideBar`: Auto-hide the side bar when showing lazygit.
 - `lazygit-vscode.autoHidePanel`: Auto-hide the panel when showing lazygit.
+
+For settings to be applied, LazyGit window must be restarted (`q`).
 
 ## More info
 

@@ -6,8 +6,10 @@ import { exec } from "child_process";
 import assert = require("assert");
 
 let lazyGitTerminal: vscode.Terminal | undefined;
-let globalConfigJSON: string;
 let globalConfig: LazyGitConfig;
+let globalConfigJSON: string;
+
+/* --- Config --- */
 
 interface LazyGitConfig {
   autoHideSideBar: boolean;
@@ -25,20 +27,15 @@ function loadConfig(): LazyGitConfig {
     configPath: config.get<string>("configPath", ""),
   };
 }
-function findExecutableOnPath(executable: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const command =
-      process.platform === "win32"
-        ? `where ${executable}`
-        : `which ${executable}`;
-    exec(command, (error, stdout) => {
-      if (error) reject(new Error(`${executable} not found on PATH`));
-      else resolve(stdout.trim());
-    });
-  });
+
+async function reloadIfConfigChange() {
+  const currentConfig = loadConfig();
+  if (JSON.stringify(currentConfig) !== globalConfigJSON) {
+    await loadExtension();
+  }
 }
 
-export async function activate(context: vscode.ExtensionContext) {
+async function loadExtension() {
   globalConfig = loadConfig();
   globalConfigJSON = JSON.stringify(globalConfig);
 
@@ -66,19 +63,23 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     globalConfig.configPath = "";
   }
+}
+
+/* --- Events --- */
+
+export async function activate(context: vscode.ExtensionContext) {
+  loadExtension();
 
   let disposable = vscode.commands.registerCommand(
     "lazygit-vscode.toggle",
     async () => {
       if (lazyGitTerminal) {
-        if (terminalFocused(lazyGitTerminal)) {
-          hideTerminal(lazyGitTerminal);
+        if (windowFocused()) {
+          closeWindow();
         } else {
-          await onShown();
-          showAndFocusTerminal(lazyGitTerminal);
+          focusWindow();
         }
       } else {
-        await onShown();
         await createWindow();
       }
     }
@@ -87,63 +88,13 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(disposable);
 }
 
-function terminalFocused(terminal: vscode.Terminal): boolean {
-  return (
-    vscode.window.activeTextEditor === undefined &&
-    vscode.window.activeTerminal === terminal
-  );
-}
+export function deactivate() {}
 
-function showAndFocusTerminal(terminal: vscode.Terminal) {
-  terminal.show(false); // take focus
-}
-
-function hideTerminal(terminal: vscode.Terminal) {
-  const openTabs = vscode.window.tabGroups.all.flatMap(
-    (group) => group.tabs
-  ).length;
-  if (openTabs === 1 && lazyGitTerminal) {
-    // only lazygit tab, close
-    closeWindow();
-  } else {
-    // toggle recently used tab
-    vscode.commands.executeCommand(
-      "workbench.action.openPreviousRecentlyUsedEditor"
-    );
-  }
-}
-
-async function onShown() {
-  await reloadIfConfigChange();
-
-  if (globalConfig.autoHideSideBar) {
-    await vscode.commands.executeCommand("workbench.action.closeSidebar");
-  }
-  if (globalConfig.autoHidePanel) {
-    await vscode.commands.executeCommand("workbench.action.closePanel");
-  }
-}
-
-async function reloadExtension() {
-  closeWindow();
-  await vscode.commands.executeCommand("workbench.action.restartExtensionHost");
-}
-
-async function reloadIfConfigChange() {
-  const currentConfig = loadConfig();
-  if (JSON.stringify(currentConfig) !== globalConfigJSON) {
-    const reload = await vscode.window.showInformationMessage(
-      "LazyGit configuration has changed. Reload now?",
-      "Yes",
-      "No"
-    );
-    if (reload === "Yes") {
-      await reloadExtension();
-    }
-  }
-}
+/* ---  Window --- */
 
 async function createWindow() {
+  await reloadIfConfigChange();
+
   let workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!workspaceFolder) workspaceFolder = os.homedir();
 
@@ -175,21 +126,67 @@ async function createWindow() {
     env: env,
   });
 
-  showAndFocusTerminal(lazyGitTerminal);
+  focusWindow();
 
+  // lazygit window closes, unlink and focus on editor (where lazygit was)
   vscode.window.onDidCloseTerminal((terminal) => {
     if (terminal === lazyGitTerminal) {
-      closeWindow();
+      lazyGitTerminal = undefined;
+      vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
+    }
+  });
+
+  // lazygit window becomes active, do auto-hide.
+  vscode.window.onDidChangeActiveTerminal((terminal) => {
+    if (terminal && terminal === lazyGitTerminal) {
+      if (globalConfig.autoHideSideBar) {
+        vscode.commands.executeCommand("workbench.action.closeSidebar");
+      }
+      if (globalConfig.autoHidePanel) {
+        vscode.commands.executeCommand("workbench.action.closePanel");
+      }
     }
   });
 }
 
-function closeWindow() {
-  if (lazyGitTerminal) {
-    lazyGitTerminal.dispose();
-    lazyGitTerminal = undefined;
-  }
-  vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
+function windowFocused(): boolean {
+  return (
+    vscode.window.activeTextEditor === undefined &&
+    vscode.window.activeTerminal === lazyGitTerminal
+  );
 }
 
-export function deactivate() {}
+function focusWindow() {
+  assert(lazyGitTerminal, "lazyGitTerminal undefined when trying to show!");
+  lazyGitTerminal.show(false); // false: take focus
+}
+
+function closeWindow() {
+  const openTabs = vscode.window.tabGroups.all.flatMap(
+    (group) => group.tabs
+  ).length;
+  if (openTabs === 1 && lazyGitTerminal) {
+    // only lazygit tab, close
+    lazyGitTerminal.dispose();
+  } else {
+    // toggle recently used tab
+    vscode.commands.executeCommand(
+      "workbench.action.openPreviousRecentlyUsedEditor"
+    );
+  }
+}
+
+/* --- Utils --- */
+
+function findExecutableOnPath(executable: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const command =
+      process.platform === "win32"
+        ? `where ${executable}`
+        : `which ${executable}`;
+    exec(command, (error, stdout) => {
+      if (error) reject(new Error(`${executable} not found on PATH`));
+      else resolve(stdout.trim());
+    });
+  });
+}
