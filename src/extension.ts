@@ -3,6 +3,7 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { exec } from "child_process";
+import assert = require("assert");
 
 let lazyGitTerminal: vscode.Terminal | undefined;
 let globalConfigJSON: string;
@@ -146,15 +147,20 @@ async function createWindow() {
   let workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
   if (!workspaceFolder) workspaceFolder = os.homedir();
 
-  if (!globalConfig.lazyGitPath) {
-    vscode.window.showErrorMessage("Uncaught error: lazygitpath is undefined!");
-    return;
-  }
-
+  assert(globalConfig.lazyGitPath, "Uncaught error: lazygitpath is undefined!");
   let lazyGitCommand = globalConfig.lazyGitPath;
-
   if (globalConfig.configPath) {
     lazyGitCommand += ` --use-config-file="${globalConfig.configPath}"`;
+  }
+
+  const env: { [key: string]: string } = {};
+  try {
+    let codePath = await findExecutableOnPath("code");
+    env.PATH = `"${codePath}"${path.delimiter}${process.env.PATH}`;
+  } catch (error) {
+    vscode.window.showWarningMessage(
+      "Could not find 'code' on PATH. Opening vscode windows with `e` may not work properly."
+    );
   }
 
   lazyGitTerminal = vscode.window.createTerminal({
@@ -166,6 +172,7 @@ async function createWindow() {
         ? ["/c", lazyGitCommand]
         : ["-c", lazyGitCommand],
     location: vscode.TerminalLocation.Editor,
+    env: env,
   });
 
   showAndFocusTerminal(lazyGitTerminal);
