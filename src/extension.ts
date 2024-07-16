@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as fs from "fs";
 import * as os from "os";
+import * as path from "path";
 import { exec } from "child_process";
 
 let lazyGitTerminal: vscode.Terminal | undefined;
@@ -23,13 +24,14 @@ function loadConfig(): LazyGitConfig {
     configPath: config.get<string>("configPath", ""),
   };
 }
-
-function findLazyGitOnPath(): Promise<string> {
+function findExecutableOnPath(executable: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const command =
-      process.platform === "win32" ? "where lazygit" : "which lazygit";
+      process.platform === "win32"
+        ? `where ${executable}`
+        : `which ${executable}`;
     exec(command, (error, stdout) => {
-      if (error) reject(new Error("LazyGit not found on PATH"));
+      if (error) reject(new Error(`${executable} not found on PATH`));
       else resolve(stdout.trim());
     });
   });
@@ -42,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Validate lazyGitPath
   if (!globalConfig.lazyGitPath) {
     try {
-      globalConfig.lazyGitPath = await findLazyGitOnPath();
+      globalConfig.lazyGitPath = await findExecutableOnPath("lazygit");
     } catch (error) {
       vscode.window.showErrorMessage(
         "LazyGit not found in config or on PATH. Please check your settings."
