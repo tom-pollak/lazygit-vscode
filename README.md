@@ -12,14 +12,17 @@ https://github.com/tom-pollak/lazygit-vscode/assets/26611948/5924db82-7937-4ed9-
 
 ## VSCode integration
 
-I use `o` to open files in VSCode from the LazyGit window. Simply edit your lazygit config (`~/Library/Application Support/lazygit/config.yml` on mac)
+Set the following in your [LazyGit config](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md) for VSCode support:
 
-```
+```yaml
 os:
-  open: '/opt/homebrew/bin/code {{filename}}' # replace with code path
+  editPreset: 'vscode'
 ```
 
-(you can use `e` aswell, but I prefer to use that for cli with nvim)
+This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md#configuring-file-editing) experience opening windows with `e`
+
+> If you prefer to use a different tool on the cli, you can configure a custom LazyGit config for VSCode with `lazygit-vscode.configPath`
+
 
 ## Requirements
 
@@ -34,10 +37,10 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 ## Extension Settings
 
 - `lazygit-vscode.lazygitPath`: Manually set LazyGit path. Otherwise use default system PATH.
-- `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you want different behaviour between VSCode and CLI.
+- `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you like different behaviour between VSCode and CLI.
 - `lazygit-vscode.autoHideSideBar`: Auto-hide the side bar when showing lazygit.
 - `lazygit-vscode.autoHidePanel`: Auto-hide the panel when showing lazygit.
 
-## For more info
+## More info
 
 > [LazyGit](https://github.com/jesseduffield/lazygit)
