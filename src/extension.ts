@@ -68,8 +68,6 @@ async function loadExtension() {
 /* --- Events --- */
 
 export async function activate(context: vscode.ExtensionContext) {
-  loadExtension();
-
   let disposable = vscode.commands.registerCommand(
     "lazygit-vscode.toggle",
     async () => {
