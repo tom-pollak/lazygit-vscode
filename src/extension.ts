@@ -78,9 +78,11 @@ export async function activate(context: vscode.ExtensionContext) {
           closeWindow();
         } else {
           focusWindow();
+          await onShown();
         }
       } else {
         await createWindow();
+        await onShown();
       }
     }
   );
@@ -135,18 +137,6 @@ async function createWindow() {
       vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
     }
   });
-
-  // lazygit window becomes active, do auto-hide.
-  vscode.window.onDidChangeActiveTerminal((terminal) => {
-    if (terminal && terminal === lazyGitTerminal) {
-      if (globalConfig.autoHideSideBar) {
-        vscode.commands.executeCommand("workbench.action.closeSidebar");
-      }
-      if (globalConfig.autoHidePanel) {
-        vscode.commands.executeCommand("workbench.action.closePanel");
-      }
-    }
-  });
 }
 
 function windowFocused(): boolean {
@@ -173,6 +163,15 @@ function closeWindow() {
     vscode.commands.executeCommand(
       "workbench.action.openPreviousRecentlyUsedEditor"
     );
+  }
+}
+
+function onShown() {
+  if (globalConfig.autoHideSideBar) {
+    vscode.commands.executeCommand("workbench.action.closeSidebar");
+  }
+  if (globalConfig.autoHidePanel) {
+    vscode.commands.executeCommand("workbench.action.closePanel");
   }
 }
 
