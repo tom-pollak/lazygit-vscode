@@ -23,7 +23,7 @@ This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/maste
 
 > If you prefer to use a different tool on the cli, you can configure a custom LazyGit config for VSCode with `lazygit-vscode.configPath`
 
-## Notes on Windows
+### Notes on Windows
 
 Default cmd is ctrl+shift+l which may be captured by the shell. Ensure the following config
 
