@@ -23,6 +23,15 @@ This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/maste
 
 > If you prefer to use a different tool on the cli, you can configure a custom LazyGit config for VSCode with `lazygit-vscode.configPath`
 
+## Notes on Windows
+
+Default cmd is ctrl+shift+l which may be captured by the shell. Ensure the following config
+
+```javascript
+  "terminal.integrated.sendKeybindingsToShell": false, // ensure this is false
+  "terminal.integrated.commandsToSkipShell": ["lazygit-vscode.toggle", "workbench.action.closeWindow"], // add this
+```
+
 ## Requirements
 
 - LazyGit must be installed on your system and accessible in your PATH (or set with `lazygit-vscode.lazygitPath`). You can find installation instructions for LazyGit [here](https://github.com/jesseduffield/lazygit#installation).
