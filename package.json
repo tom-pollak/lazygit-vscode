@@ -37,6 +37,11 @@
           "description": "The path to the lazygit executable",
           "scope": "machine"
         },
+        "lazygit-vscode.configPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to a custom LazyGit config file (otherwise use default)"
+        },
         "lazygit-vscode.autoHideSideBar": {
           "type": "boolean",
           "description": "Auto-hide the side bar when showing lazygit",
@@ -47,10 +52,10 @@
           "description": "Auto-hide the panel when showing lazygit",
           "scope": "window"
         },
-        "lazygit-vscode.configPath": {
-          "type": "string",
-          "default": "",
-          "description": "Path to a custom LazyGit config file (otherwise use default)"
+        "lazygit-vscode.autoMaximizeWindow": {
+          "type": "boolean",
+          "description": "Fullscreen the lazygit window, hiding any splits (this also minimizes sidebar)",
+          "scope": "window"
         }
       }
     }
