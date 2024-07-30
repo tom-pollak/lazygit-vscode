@@ -46,6 +46,7 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 
 - `lazygit-vscode.lazygitPath`: Manually set LazyGit path. Otherwise use default system PATH.
 - `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you like different behaviour between VSCode and CLI.
+-  `lazygit-vscode.autoMaximizeWindow`: When working in split editors, maximize the lazygit window when showing lazygit (and restore on hide).
 - `lazygit-vscode.autoHideSideBar`: Auto-hide the side bar when showing lazygit.
 - `lazygit-vscode.autoHidePanel`: Auto-hide the panel when showing lazygit.
 
