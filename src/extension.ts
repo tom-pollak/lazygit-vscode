@@ -75,15 +75,15 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       if (lazyGitTerminal) {
         if (windowFocused()) {
-          await closeWindow();
-          await onHide();
+          closeWindow();
+          onHide();
         } else {
-          await focusWindow();
-          await onShown();
+          focusWindow();
+          onShown();
         }
       } else {
         await createWindow();
-        await onShown();
+        onShown();
       }
     }
   );
@@ -175,7 +175,9 @@ function onShown() {
     vscode.commands.executeCommand("workbench.action.closePanel");
   }
   if (globalConfig.autoMaximizeWindow) {
-    vscode.commands.executeCommand("workbench.action.maximizeEditorHideSidebar");
+    vscode.commands.executeCommand(
+      "workbench.action.maximizeEditorHideSidebar"
+    );
   }
 }
 
