@@ -157,9 +157,9 @@ function closeWindow() {
     // only lazygit tab, close
     lazyGitTerminal.dispose();
   } else {
-    // toggle recently used tab
+    // toggle recently used tab in group
     vscode.commands.executeCommand(
-      "workbench.action.openPreviousRecentlyUsedEditor"
+      "workbench.action.openPreviousRecentlyUsedEditorInGroup"
     );
   }
 }
