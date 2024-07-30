@@ -12,19 +12,21 @@ let globalConfigJSON: string;
 /* --- Config --- */
 
 interface LazyGitConfig {
-  autoHideSideBar: boolean;
-  autoHidePanel: boolean;
   lazyGitPath: string;
   configPath: string;
+  autoHideSideBar: boolean;
+  autoHidePanel: boolean;
+  autoMaximizeWindow: boolean;
 }
 
 function loadConfig(): LazyGitConfig {
   const config = vscode.workspace.getConfiguration("lazygit-vscode");
   return {
-    autoHideSideBar: config.get<boolean>("autoHideSideBar", false),
-    autoHidePanel: config.get<boolean>("autoHidePanel", false),
     lazyGitPath: config.get<string>("lazygitPath", ""),
     configPath: config.get<string>("configPath", ""),
+    autoHideSideBar: config.get<boolean>("autoHideSideBar", false),
+    autoHidePanel: config.get<boolean>("autoHidePanel", false),
+    autoMaximizeWindow: config.get<boolean>("autoMaximizeWindow", false),
   };
 }
 
@@ -73,9 +75,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       if (lazyGitTerminal) {
         if (windowFocused()) {
-          closeWindow();
+          await closeWindow();
+          await onHide();
         } else {
-          focusWindow();
+          await focusWindow();
           await onShown();
         }
       } else {
@@ -170,6 +173,15 @@ function onShown() {
   }
   if (globalConfig.autoHidePanel) {
     vscode.commands.executeCommand("workbench.action.closePanel");
+  }
+  if (globalConfig.autoMaximizeWindow) {
+    vscode.commands.executeCommand("workbench.action.maximizeEditorHideSidebar");
+  }
+}
+
+function onHide() {
+  if (globalConfig.autoMaximizeWindow) {
+    vscode.commands.executeCommand("workbench.action.evenEditorWidths");
   }
 }
 
