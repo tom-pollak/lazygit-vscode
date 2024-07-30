@@ -136,6 +136,7 @@ async function createWindow() {
     if (terminal === lazyGitTerminal) {
       lazyGitTerminal = undefined;
       vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
+      onHide();
     }
   });
 }
