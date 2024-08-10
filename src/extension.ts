@@ -120,7 +120,10 @@ async function createWindow() {
   lazyGitTerminal = vscode.window.createTerminal({
     name: "LazyGit",
     cwd: workspaceFolder,
-    shellPath: process.platform === "win32" ? "cmd.exe" : "/bin/bash",
+    shellPath:
+      process.platform === "win32"
+        ? "cmd.exe"
+        : await findExecutableOnPath("bash"),
     shellArgs:
       process.platform === "win32"
         ? ["/c", lazyGitCommand]
