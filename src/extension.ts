@@ -142,13 +142,21 @@ async function createWindow() {
       onHide();
     }
   });
+
+  // on focus change, if lazygit *was* focused, onHide()
+  vscode.window.onDidChangeActiveTextEditor((editor) => {
+    if (editor && windowActive()) {
+      onHide();
+    }
+  });
+}
+
+function windowActive(): boolean {
+  return lazyGitTerminal === vscode.window.activeTerminal;
 }
 
 function windowFocused(): boolean {
-  return (
-    vscode.window.activeTextEditor === undefined &&
-    vscode.window.activeTerminal === lazyGitTerminal
-  );
+  return vscode.window.activeTextEditor === undefined && windowActive();
 }
 
 function focusWindow() {
