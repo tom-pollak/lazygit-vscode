@@ -37,12 +37,22 @@ async function reloadIfConfigChange() {
   }
 }
 
+function expandHome(pth: string): string {
+  return path.normalize(pth.replace(/^~(?=$|\/|\\)/, os.homedir()));
+}
+
 async function loadExtension() {
   globalConfig = loadConfig();
   globalConfigJSON = JSON.stringify(globalConfig);
 
+  if (globalConfig.configPath) {
+    globalConfig.configPath = expandHome(globalConfig.configPath);
+  }
+
   // Validate lazyGitPath
-  if (!globalConfig.lazyGitPath) {
+  if (globalConfig.lazyGitPath) {
+    globalConfig.lazyGitPath = expandHome(globalConfig.lazyGitPath);
+  } else {
     try {
       globalConfig.lazyGitPath = await findExecutableOnPath("lazygit");
     } catch (error) {
@@ -58,7 +68,6 @@ async function loadExtension() {
     );
   }
 
-  // Validate configPath
   if (globalConfig.configPath && !fs.existsSync(globalConfig.configPath)) {
     vscode.window.showWarningMessage(
       `Custom config file not found at ${globalConfig.configPath}. The default config will be used.`
