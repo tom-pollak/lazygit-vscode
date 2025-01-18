@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
+import * as process from "process";
 import { exec } from "child_process";
 import assert = require("assert");
 
@@ -38,7 +39,17 @@ async function reloadIfConfigChange() {
 }
 
 function expandHome(pth: string): string {
-  return path.normalize(pth.replace(/^~(?=$|\/|\\)/, os.homedir()));
+  switch (process.platform) {
+    case "win32":
+      // expand environment variables
+      return path.normalize(pth.replace(/%([^%]+)%/g, (_,n) => process.env[n] || ""));
+
+    case 'linux':
+    case 'darwin':
+      return path.normalize(pth.replace(/^~(?=$|\/|\\)/, os.homedir()));
+  }
+
+  return pth
 }
 
 async function loadExtension() {
