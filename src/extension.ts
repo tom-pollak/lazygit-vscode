@@ -38,18 +38,14 @@ async function reloadIfConfigChange() {
   }
 }
 
-function expandHome(pth: string): string {
-  switch (process.platform) {
-    case "win32":
-      // expand environment variables
-      return path.normalize(pth.replace(/%([^%]+)%/g, (_,n) => process.env[n] || ""));
-
-    case 'linux':
-    case 'darwin':
-      return path.normalize(pth.replace(/^~(?=$|\/|\\)/, os.homedir()));
+function expandPath(pth: string): string {
+  pth = pth.replace(/^~(?=$|\/|\\)/, os.homedir());
+  if (process.platform === "win32") {
+    pth = pth.replace(/%([^%]+)%/g, (_,n) => process.env[n] || "");
+  } else {
+    pth = pth.replace(/\$([A-Za-z0-9_]+)/g, (_, n) => process.env[n] || "");
   }
-
-  return pth
+  return pth;
 }
 
 async function loadExtension() {
@@ -57,12 +53,12 @@ async function loadExtension() {
   globalConfigJSON = JSON.stringify(globalConfig);
 
   if (globalConfig.configPath) {
-    globalConfig.configPath = expandHome(globalConfig.configPath);
+    globalConfig.configPath = expandPath(globalConfig.configPath);
   }
 
   // Validate lazyGitPath
   if (globalConfig.lazyGitPath) {
-    globalConfig.lazyGitPath = expandHome(globalConfig.lazyGitPath);
+    globalConfig.lazyGitPath = expandPath(globalConfig.lazyGitPath);
   } else {
     try {
       globalConfig.lazyGitPath = await findExecutableOnPath("lazygit");
