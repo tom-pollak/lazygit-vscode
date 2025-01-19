@@ -138,7 +138,7 @@ async function createWindow() {
     cwd: workspaceFolder,
     shellPath:
       process.platform === "win32"
-        ? "cmd.exe"
+        ? "powershell.exe"
         : await findExecutableOnPath("bash"),
     shellArgs:
       process.platform === "win32"
