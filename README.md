@@ -17,6 +17,7 @@ Set the following in your [LazyGit config](https://github.com/jesseduffield/lazy
 ```yaml
 os:
   editPreset: "vscode"
+promptToReturnFromSubprocess: false # removes "press enter to return to lazygit" popup
 ```
 
 This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md#configuring-file-editing) experience opening windows with `e`
