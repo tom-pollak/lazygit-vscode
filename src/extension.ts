@@ -18,6 +18,7 @@ interface LazyGitConfig {
   autoHideSideBar: boolean;
   autoHidePanel: boolean;
   autoMaximizeWindow: boolean;
+  autoMaximizeWindowKeepSidebarOpen: boolean;
 }
 
 function loadConfig(): LazyGitConfig {
@@ -28,6 +29,10 @@ function loadConfig(): LazyGitConfig {
     autoHideSideBar: config.get<boolean>("autoHideSideBar", false),
     autoHidePanel: config.get<boolean>("autoHidePanel", false),
     autoMaximizeWindow: config.get<boolean>("autoMaximizeWindow", false),
+    autoMaximizeWindowKeepSidebarOpen: config.get<boolean>(
+      "autoMaximizeWindowKeepSidebarOpen",
+      false
+    ),
   };
 }
 
@@ -41,7 +46,7 @@ async function reloadIfConfigChange() {
 function expandPath(pth: string): string {
   pth = pth.replace(/^~(?=$|\/|\\)/, os.homedir());
   if (process.platform === "win32") {
-    pth = pth.replace(/%([^%]+)%/g, (_,n) => process.env[n] || "");
+    pth = pth.replace(/%([^%]+)%/g, (_, n) => process.env[n] || "");
   } else {
     pth = pth.replace(/\$([A-Za-z0-9_]+)/g, (_, n) => process.env[n] || "");
   }
@@ -198,6 +203,11 @@ function onShown() {
     vscode.commands.executeCommand(
       "workbench.action.maximizeEditorHideSidebar"
     );
+    if (globalConfig.autoMaximizeWindowKeepSidebarOpen) {
+      vscode.commands.executeCommand(
+        "workbench.action.toggleSidebarVisibility"
+      );
+    }
   }
 }
 
