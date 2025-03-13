@@ -45,17 +45,35 @@
         "lazygit-vscode.autoHideSideBar": {
           "type": "boolean",
           "description": "Auto-hide the side bar when showing lazygit",
-          "scope": "window"
+          "scope": "window",
+          "default": false
         },
         "lazygit-vscode.autoHidePanel": {
           "type": "boolean",
           "description": "Auto-hide the panel when showing lazygit",
-          "scope": "window"
+          "scope": "window",
+          "default": false
         },
         "lazygit-vscode.autoMaximizeWindow": {
           "type": "boolean",
           "description": "Fullscreen the lazygit window, hiding any splits (this also minimizes sidebar)",
-          "scope": "window"
+          "scope": "window",
+          "default": false
+        },
+        "lazygit-vscode.autoRestoreSideBar": {
+          "type": "boolean",
+          "default": false,
+          "description": "Restore sidebar when quitting LazyGit"
+        },
+        "lazygit-vscode.autoRestoreSecondarySideBar": {
+          "type": "boolean",
+          "default": false,
+          "description": "Restore secondary sidebar when quitting LazyGit"
+        },
+        "lazygit-vscode.autoRestorePanel": {
+          "type": "boolean",
+          "default": false,
+          "description": "Restore the panel when quitting LazyGit"
         }
       }
     }

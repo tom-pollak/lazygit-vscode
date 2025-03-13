@@ -18,6 +18,9 @@ interface LazyGitConfig {
   autoHideSideBar: boolean;
   autoHidePanel: boolean;
   autoMaximizeWindow: boolean;
+  autoRestoreSideBar: boolean;
+  autoRestoreSecondarySideBar: boolean;
+  autoRestorePanel: boolean;
 }
 
 function loadConfig(): LazyGitConfig {
@@ -28,6 +31,9 @@ function loadConfig(): LazyGitConfig {
     autoHideSideBar: config.get<boolean>("autoHideSideBar", false),
     autoHidePanel: config.get<boolean>("autoHidePanel", false),
     autoMaximizeWindow: config.get<boolean>("autoMaximizeWindow", false),
+    autoRestoreSideBar: config.get<boolean>("autoRestoreSideBar", true),
+    autoRestoreSecondarySideBar: config.get<boolean>("autoRestoreSecondarySideBar", true),
+    autoRestorePanel: config.get<boolean>("autoRestorePanel", true),
   };
 }
 
@@ -154,8 +160,8 @@ async function createWindow() {
   vscode.window.onDidCloseTerminal((terminal) => {
     if (terminal === lazyGitTerminal) {
       lazyGitTerminal = undefined;
-      vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
       onHide();
+      restoreEditor();
     }
   });
 }
@@ -202,9 +208,32 @@ function onShown() {
 }
 
 function onHide() {
+  // Restore sidebar if it was configured to be auto-hidden
+  if (globalConfig.autoHideSideBar && globalConfig.autoRestoreSideBar) {
+    vscode.commands.executeCommand("workbench.view.explorer");
+  }
+
+  // Restore secondary sidebar if it was configured to be auto-hidden
+  if (globalConfig.autoHideSideBar && globalConfig.autoRestoreSecondarySideBar) {
+    vscode.commands.executeCommand("workbench.action.toggleAuxiliaryBar");
+  }
+
+  // Restore panel if it was configured to be auto-hidden
+  if (globalConfig.autoHidePanel && globalConfig.autoRestorePanel) {
+    vscode.commands.executeCommand("workbench.action.togglePanel");
+  }
+
   if (globalConfig.autoMaximizeWindow) {
     vscode.commands.executeCommand("workbench.action.evenEditorWidths");
   }
+}
+
+function restoreEditor() {
+  const timeoutValue = globalConfig.autoRestorePanel ? 100 : 0;
+
+  setTimeout(() => {
+    vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
+  }, timeoutValue);
 }
 
 /* --- Utils --- */
