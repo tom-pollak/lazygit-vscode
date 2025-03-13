@@ -21,6 +21,7 @@ interface LazyGitConfig {
   autoRestoreSideBar: boolean;
   autoRestoreSecondarySideBar: boolean;
   autoRestorePanel: boolean;
+  autoMaximizeWindowKeepSidebarOpen: boolean;
 }
 
 function loadConfig(): LazyGitConfig {
@@ -34,6 +35,10 @@ function loadConfig(): LazyGitConfig {
     autoRestoreSideBar: config.get<boolean>("autoRestoreSideBar", true),
     autoRestoreSecondarySideBar: config.get<boolean>("autoRestoreSecondarySideBar", true),
     autoRestorePanel: config.get<boolean>("autoRestorePanel", true),
+    autoMaximizeWindowKeepSidebarOpen: config.get<boolean>(
+      "autoMaximizeWindowKeepSidebarOpen",
+      false
+    ),
   };
 }
 
@@ -47,7 +52,7 @@ async function reloadIfConfigChange() {
 function expandPath(pth: string): string {
   pth = pth.replace(/^~(?=$|\/|\\)/, os.homedir());
   if (process.platform === "win32") {
-    pth = pth.replace(/%([^%]+)%/g, (_,n) => process.env[n] || "");
+    pth = pth.replace(/%([^%]+)%/g, (_, n) => process.env[n] || "");
   } else {
     pth = pth.replace(/\$([A-Za-z0-9_]+)/g, (_, n) => process.env[n] || "");
   }
@@ -204,6 +209,11 @@ function onShown() {
     vscode.commands.executeCommand(
       "workbench.action.maximizeEditorHideSidebar"
     );
+    if (globalConfig.autoMaximizeWindowKeepSidebarOpen) {
+      vscode.commands.executeCommand(
+        "workbench.action.toggleSidebarVisibility"
+      );
+    }
   }
 }
 

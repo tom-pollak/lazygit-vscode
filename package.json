@@ -56,7 +56,12 @@
         },
         "lazygit-vscode.autoMaximizeWindow": {
           "type": "boolean",
-          "description": "Fullscreen the lazygit window, hiding any splits (this also minimizes sidebar)",
+          "description": "Fullscreen the lazygit window, hiding any splits (see also autoMaximizeWindowKeepSidebarOpen)",
+          "scope": "window"
+        },
+        "lazygit-vscode.autoMaximizeWindowKeepSidebarOpen": {
+          "type": "boolean",
+          "description": "Sidebar will be open when the lazygit window is maximized",
           "scope": "window",
           "default": false
         },
