@@ -118,7 +118,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(disposable);
 }
 
-export function deactivate() {}
+export function deactivate() { }
 
 /* ---  Window --- */
 
@@ -219,8 +219,8 @@ function onShown() {
 
 function onHide() {
   // Restore sidebar if it was configured to be auto-hidden
-  if (globalConfig.autoHideSideBar && globalConfig.autoRestoreSideBar) {
-    vscode.commands.executeCommand("workbench.view.explorer");
+  if (globalConfig.autoHideSideBar && globalConfig.autoRestoreSideBar && !globalConfig.autoMaximizeWindowKeepSidebarOpen) {
+    vscode.commands.executeCommand("workbench.action.toggleSidebarVisibility");
   }
 
   // Restore secondary sidebar if it was configured to be auto-hidden
