@@ -33,7 +33,10 @@ function loadConfig(): LazyGitConfig {
     autoHidePanel: config.get<boolean>("autoHidePanel", false),
     autoMaximizeWindow: config.get<boolean>("autoMaximizeWindow", false),
     autoRestoreSideBar: config.get<boolean>("autoRestoreSideBar", true),
-    autoRestoreSecondarySideBar: config.get<boolean>("autoRestoreSecondarySideBar", true),
+    autoRestoreSecondarySideBar: config.get<boolean>(
+      "autoRestoreSecondarySideBar",
+      true
+    ),
     autoRestorePanel: config.get<boolean>("autoRestorePanel", true),
     autoMaximizeWindowKeepSidebarOpen: config.get<boolean>(
       "autoMaximizeWindowKeepSidebarOpen",
@@ -118,7 +121,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(disposable);
 }
 
-export function deactivate() { }
+export function deactivate() {}
 
 /* ---  Window --- */
 
@@ -219,12 +222,19 @@ function onShown() {
 
 function onHide() {
   // Restore sidebar if it was configured to be auto-hidden
-  if (globalConfig.autoHideSideBar && globalConfig.autoRestoreSideBar && !globalConfig.autoMaximizeWindowKeepSidebarOpen) {
+  if (
+    globalConfig.autoRestoreSideBar &&
+    (globalConfig.autoHideSideBar || globalConfig.autoMaximizeWindow) &&
+    !globalConfig.autoMaximizeWindowKeepSidebarOpen
+  ) {
     vscode.commands.executeCommand("workbench.action.toggleSidebarVisibility");
   }
 
   // Restore secondary sidebar if it was configured to be auto-hidden
-  if (globalConfig.autoHideSideBar && globalConfig.autoRestoreSecondarySideBar) {
+  if (
+    globalConfig.autoHideSideBar &&
+    globalConfig.autoRestoreSecondarySideBar
+  ) {
     vscode.commands.executeCommand("workbench.action.toggleAuxiliaryBar");
   }
 
