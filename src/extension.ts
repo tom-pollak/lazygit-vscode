@@ -203,14 +203,28 @@ function closeWindow() {
 }
 
 function onShown() {
-  // Handle panels visibility
-  if (
+  if (globalConfig.autoMaximizeWindow) {
+    vscode.commands.executeCommand(
+      "workbench.action.maximizeEditorHideSidebar"
+    );
+    // Keep sidebar visible
+    if (globalConfig.panels.sidebar === "keep") {
+      vscode.commands.executeCommand(
+        "workbench.action.toggleSidebarVisibility"
+      );
+    }
+  } else if (
+    // autoMaximize: false, keep: false
     globalConfig.panels.sidebar === "hide" ||
     globalConfig.panels.sidebar === "hideRestore"
   ) {
     vscode.commands.executeCommand("workbench.action.closeSidebar");
+  } else {
+    // autoMaximize: false && keep: true
+    // noop
   }
 
+  // Handle panels visibility
   if (
     globalConfig.panels.panel === "hide" ||
     globalConfig.panels.panel === "hideRestore"
@@ -223,11 +237,6 @@ function onShown() {
     globalConfig.panels.secondarySidebar === "hideRestore"
   ) {
     vscode.commands.executeCommand("workbench.action.closeAuxiliaryBar");
-  }
-
-  // Maximize if configured (keeps sidebar visible)
-  if (globalConfig.autoMaximizeWindow) {
-    vscode.commands.executeCommand("workbench.action.maximizeEditor");
   }
 }
 
