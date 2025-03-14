@@ -259,8 +259,12 @@ function onHide() {
     vscode.commands.executeCommand("workbench.action.evenEditorWidths");
   }
 
-  // Editor Focus -- panel will take focus so short delay required
-  const timeoutValue = globalConfig.panels.panel === "hideRestore" ? 100 : 0;
+  // Editor Focus -- panel / auxiliaryBar will take focus so short delay required
+  const timeoutValue =
+    globalConfig.panels.panel === "hideRestore" ||
+    globalConfig.panels.secondarySidebar === "hideRestore"
+      ? 200
+      : 0;
   setTimeout(() => {
     vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
   }, timeoutValue);
