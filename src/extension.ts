@@ -203,54 +203,54 @@ function closeWindow() {
 }
 
 function onShown() {
+  const shouldKeep = (behavior: PanelBehavior) => behavior === "keep";
+  const shouldHide = (behavior: PanelBehavior) =>
+    behavior === "hide" || behavior === "hideRestore";
+
   if (globalConfig.autoMaximizeWindow) {
     vscode.commands.executeCommand(
       "workbench.action.maximizeEditorHideSidebar"
     );
-    // Keep sidebar visible
-    if (globalConfig.panels.sidebar === "keep") {
+
+    // maximizeEditorHideSidebar closes both sidebars. If keep is true, we need to open them again.
+    if (shouldKeep(globalConfig.panels.sidebar)) {
       vscode.commands.executeCommand(
         "workbench.action.toggleSidebarVisibility"
       );
     }
-  } else if (
-    // autoMaximize: false, keep: false
-    globalConfig.panels.sidebar === "hide" ||
-    globalConfig.panels.sidebar === "hideRestore"
-  ) {
-    vscode.commands.executeCommand("workbench.action.closeSidebar");
+    if (shouldKeep(globalConfig.panels.secondarySidebar)) {
+      vscode.commands.executeCommand("workbench.action.toggleAuxiliaryBar");
+    }
   } else {
-    // autoMaximize: false && keep: true
-    // noop
+    // autoMaximizeWindow: false
+    if (shouldHide(globalConfig.panels.sidebar)) {
+      vscode.commands.executeCommand("workbench.action.closeSidebar");
+    }
+
+    if (shouldHide(globalConfig.panels.secondarySidebar)) {
+      vscode.commands.executeCommand("workbench.action.closeAuxiliaryBar");
+    }
   }
 
-  // Handle panels visibility
-  if (
-    globalConfig.panels.panel === "hide" ||
-    globalConfig.panels.panel === "hideRestore"
-  ) {
+  // Bottom panel not affected by autoMaximizeWindow
+  if (shouldHide(globalConfig.panels.panel)) {
     vscode.commands.executeCommand("workbench.action.closePanel");
-  }
-
-  if (
-    globalConfig.panels.secondarySidebar === "hide" ||
-    globalConfig.panels.secondarySidebar === "hideRestore"
-  ) {
-    vscode.commands.executeCommand("workbench.action.closeAuxiliaryBar");
   }
 }
 
 function onHide() {
   // Restore panels
-  if (globalConfig.panels.sidebar === "hideRestore") {
+  const shouldRestore = (behavior: PanelBehavior) => behavior === "hideRestore";
+
+  if (shouldRestore(globalConfig.panels.sidebar)) {
     vscode.commands.executeCommand("workbench.action.toggleSidebarVisibility");
   }
 
-  if (globalConfig.panels.secondarySidebar === "hideRestore") {
+  if (shouldRestore(globalConfig.panels.secondarySidebar)) {
     vscode.commands.executeCommand("workbench.action.toggleAuxiliaryBar");
   }
 
-  if (globalConfig.panels.panel === "hideRestore") {
+  if (shouldRestore(globalConfig.panels.panel)) {
     vscode.commands.executeCommand("workbench.action.togglePanel");
   }
 
