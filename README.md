@@ -46,17 +46,21 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 ## Extension Settings
 
 ### Basic Configuration
+
 - `lazygit-vscode.lazygitPath`: Manually set LazyGit path. Otherwise use default system PATH.
 - `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you like different behaviour between VSCode and CLI.
 - `lazygit-vscode.autoMaximizeWindow`: Maximize the lazygit window in the editor (keeps sidebar visible). Useful when working with split editors.
 
 ### Panel Behavior
+
 You can control how LazyGit interacts with VS Code UI panels using the `panels` setting. Each panel can be set to:
+
 - `"keep"`: Leave panel as is (default)
 - `"hide"`: Hide the panel when showing LazyGit
 - `"hideRestore"`: Hide the panel when showing LazyGit and restore it when closing
 
 Example configuration:
+
 ```json
 "lazygit-vscode.panels": {
   "sidebar": "hideRestore",
@@ -66,6 +70,7 @@ Example configuration:
 ```
 
 #### Available Panels
+
 - `lazygit-vscode.panels.sidebar`: Primary sidebar (Explorer, Source Control, etc.)
 - `lazygit-vscode.panels.panel`: Bottom panel (Terminal, Output, etc.)
 - `lazygit-vscode.panels.secondarySidebar`: Secondary sidebar (usually on the right side)
