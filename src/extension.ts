@@ -12,36 +12,48 @@ let globalConfigJSON: string;
 
 /* --- Config --- */
 
+type PanelBehavior = "keep" | "hide" | "hideRestore";
+
+interface PanelOptions {
+  sidebar: PanelBehavior;
+  panel: PanelBehavior;
+  secondarySidebar: PanelBehavior;
+}
+
 interface LazyGitConfig {
   lazyGitPath: string;
   configPath: string;
-  autoHideSideBar: boolean;
-  autoHidePanel: boolean;
   autoMaximizeWindow: boolean;
-  autoRestoreSideBar: boolean;
-  autoRestoreSecondarySideBar: boolean;
-  autoRestorePanel: boolean;
-  autoMaximizeWindowKeepSidebarOpen: boolean;
+  panels: PanelOptions;
 }
 
 function loadConfig(): LazyGitConfig {
   const config = vscode.workspace.getConfiguration("lazygit-vscode");
+
+  // Helper function for getting panel behavior with legacy fallback
+  function getPanelBehavior(panelName: string): PanelBehavior {
+    const newSetting = config.get<PanelBehavior>(`panels.${panelName}`, "keep");
+    if (newSetting !== "keep") return newSetting;
+
+    // Legacy fallbacks for published settings
+    if (panelName === "sidebar") {
+      return config.get<boolean>("autoHideSideBar", false) ? "hide" : "keep";
+    } else if (panelName === "panel") {
+      return config.get<boolean>("autoHidePanel", false) ? "hide" : "keep";
+    }
+
+    return "keep";
+  }
+
   return {
     lazyGitPath: config.get<string>("lazygitPath", ""),
     configPath: config.get<string>("configPath", ""),
-    autoHideSideBar: config.get<boolean>("autoHideSideBar", false),
-    autoHidePanel: config.get<boolean>("autoHidePanel", false),
     autoMaximizeWindow: config.get<boolean>("autoMaximizeWindow", false),
-    autoRestoreSideBar: config.get<boolean>("autoRestoreSideBar", true),
-    autoRestoreSecondarySideBar: config.get<boolean>(
-      "autoRestoreSecondarySideBar",
-      true
-    ),
-    autoRestorePanel: config.get<boolean>("autoRestorePanel", true),
-    autoMaximizeWindowKeepSidebarOpen: config.get<boolean>(
-      "autoMaximizeWindowKeepSidebarOpen",
-      false
-    ),
+    panels: {
+      sidebar: getPanelBehavior("sidebar"),
+      panel: getPanelBehavior("panel"),
+      secondarySidebar: getPanelBehavior("secondarySidebar"),
+    },
   };
 }
 
@@ -50,16 +62,6 @@ async function reloadIfConfigChange() {
   if (JSON.stringify(currentConfig) !== globalConfigJSON) {
     await loadExtension();
   }
-}
-
-function expandPath(pth: string): string {
-  pth = pth.replace(/^~(?=$|\/|\\)/, os.homedir());
-  if (process.platform === "win32") {
-    pth = pth.replace(/%([^%]+)%/g, (_, n) => process.env[n] || "");
-  } else {
-    pth = pth.replace(/\$([A-Za-z0-9_]+)/g, (_, n) => process.env[n] || "");
-  }
-  return pth;
 }
 
 async function loadExtension() {
@@ -169,7 +171,6 @@ async function createWindow() {
     if (terminal === lazyGitTerminal) {
       lazyGitTerminal = undefined;
       onHide();
-      restoreEditor();
     }
   });
 }
@@ -202,55 +203,55 @@ function closeWindow() {
 }
 
 function onShown() {
-  if (globalConfig.autoHideSideBar) {
+  // Handle panels visibility
+  if (
+    globalConfig.panels.sidebar === "hide" ||
+    globalConfig.panels.sidebar === "hideRestore"
+  ) {
     vscode.commands.executeCommand("workbench.action.closeSidebar");
   }
-  if (globalConfig.autoHidePanel) {
+
+  if (
+    globalConfig.panels.panel === "hide" ||
+    globalConfig.panels.panel === "hideRestore"
+  ) {
     vscode.commands.executeCommand("workbench.action.closePanel");
   }
+
+  if (
+    globalConfig.panels.secondarySidebar === "hide" ||
+    globalConfig.panels.secondarySidebar === "hideRestore"
+  ) {
+    vscode.commands.executeCommand("workbench.action.closeAuxiliaryBar");
+  }
+
+  // Maximize if configured (keeps sidebar visible)
   if (globalConfig.autoMaximizeWindow) {
-    vscode.commands.executeCommand(
-      "workbench.action.maximizeEditorHideSidebar"
-    );
-    if (globalConfig.autoMaximizeWindowKeepSidebarOpen) {
-      vscode.commands.executeCommand(
-        "workbench.action.toggleSidebarVisibility"
-      );
-    }
+    vscode.commands.executeCommand("workbench.action.maximizeEditor");
   }
 }
 
 function onHide() {
-  // Restore sidebar if it was configured to be auto-hidden
-  if (
-    globalConfig.autoRestoreSideBar &&
-    (globalConfig.autoHideSideBar || globalConfig.autoMaximizeWindow) &&
-    !globalConfig.autoMaximizeWindowKeepSidebarOpen
-  ) {
+  // Restore panels
+  if (globalConfig.panels.sidebar === "hideRestore") {
     vscode.commands.executeCommand("workbench.action.toggleSidebarVisibility");
   }
 
-  // Restore secondary sidebar if it was configured to be auto-hidden
-  if (
-    globalConfig.autoHideSideBar &&
-    globalConfig.autoRestoreSecondarySideBar
-  ) {
+  if (globalConfig.panels.secondarySidebar === "hideRestore") {
     vscode.commands.executeCommand("workbench.action.toggleAuxiliaryBar");
   }
 
-  // Restore panel if it was configured to be auto-hidden
-  if (globalConfig.autoHidePanel && globalConfig.autoRestorePanel) {
+  if (globalConfig.panels.panel === "hideRestore") {
     vscode.commands.executeCommand("workbench.action.togglePanel");
   }
 
+  // Unmaximize
   if (globalConfig.autoMaximizeWindow) {
     vscode.commands.executeCommand("workbench.action.evenEditorWidths");
   }
-}
 
-function restoreEditor() {
-  const timeoutValue = globalConfig.autoRestorePanel ? 100 : 0;
-
+  // Editor Focus -- panel will take focus so short delay required
+  const timeoutValue = globalConfig.panels.panel === "hideRestore" ? 100 : 0;
   setTimeout(() => {
     vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
   }, timeoutValue);
@@ -269,4 +270,14 @@ function findExecutableOnPath(executable: string): Promise<string> {
       else resolve(stdout.trim());
     });
   });
+}
+
+function expandPath(pth: string): string {
+  pth = pth.replace(/^~(?=$|\/|\\)/, os.homedir());
+  if (process.platform === "win32") {
+    pth = pth.replace(/%([^%]+)%/g, (_, n) => process.env[n] || "");
+  } else {
+    pth = pth.replace(/\$([A-Za-z0-9_]+)/g, (_, n) => process.env[n] || "");
+  }
+  return pth;
 }
