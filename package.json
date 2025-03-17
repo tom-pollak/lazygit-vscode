@@ -83,7 +83,7 @@
                 "hide",
                 "hideRestore"
               ],
-              "default": "keep",
+              "default": "hide",
               "description": "Secondary sidebar behavior when showing lazygit",
               "enumDescriptions": [
                 "Keep secondary sidebar as is",

@@ -32,8 +32,12 @@ function loadConfig(): LazyGitConfig {
 
   // Helper function for getting panel behavior with legacy fallback
   function getPanelBehavior(panelName: string): PanelBehavior {
-    const newSetting = config.get<PanelBehavior>(`panels.${panelName}`, "keep");
-    if (newSetting !== "keep") return newSetting;
+    const defaultValue = panelName === "secondarySidebar" ? "hide" : "keep";
+    const newSetting = config.get<PanelBehavior>(
+      `panels.${panelName}`,
+      defaultValue
+    );
+    if (newSetting !== defaultValue) return newSetting;
 
     // Legacy fallbacks for published settings
     if (panelName === "sidebar") {
@@ -42,7 +46,7 @@ function loadConfig(): LazyGitConfig {
       return config.get<boolean>("autoHidePanel", false) ? "hide" : "keep";
     }
 
-    return "keep";
+    return defaultValue;
   }
 
   return {
@@ -220,6 +224,11 @@ function onShown() {
     }
     if (shouldKeep(globalConfig.panels.secondarySidebar)) {
       vscode.commands.executeCommand("workbench.action.toggleAuxiliaryBar");
+      setTimeout(() => {
+        vscode.commands.executeCommand(
+          "workbench.action.focusActiveEditorGroup"
+        );
+      }, 200);
     }
   } else {
     // autoMaximizeWindow: false
