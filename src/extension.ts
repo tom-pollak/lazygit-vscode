@@ -134,8 +134,7 @@ export function deactivate() {}
 async function createWindow() {
   await reloadIfConfigChange();
 
-  let workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
-  if (!workspaceFolder) workspaceFolder = os.homedir();
+  const workspaceFolder = getWorkspaceFolder();
 
   assert(globalConfig.lazyGitPath, "Uncaught error: lazygitpath is undefined!");
   let lazyGitCommand = globalConfig.lazyGitPath;
@@ -283,10 +282,11 @@ function onHide() {
 
 function findExecutableOnPath(executable: string): Promise<string> {
   return new Promise((resolve, reject) => {
+    const workspaceFolder = getWorkspaceFolder();
     const command =
       process.platform === "win32"
         ? `where ${executable}`
-        : `which ${executable}`;
+        : `cd ${workspaceFolder} && which ${executable}`;
     exec(command, (error, stdout) => {
       if (error) reject(new Error(`${executable} not found on PATH`));
       else resolve(stdout.trim());
@@ -302,4 +302,10 @@ function expandPath(pth: string): string {
     pth = pth.replace(/\$([A-Za-z0-9_]+)/g, (_, n) => process.env[n] || "");
   }
   return pth;
+}
+
+function getWorkspaceFolder(): string {
+  let workspaceFolder = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+  if (!workspaceFolder) workspaceFolder = os.homedir();
+  return workspaceFolder;
 }
