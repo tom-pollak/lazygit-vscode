@@ -9,6 +9,7 @@ import assert = require("assert");
 let lazyGitTerminal: vscode.Terminal | undefined;
 let globalConfig: LazyGitConfig;
 let globalConfigJSON: string;
+const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
 
 /* --- Config --- */
 
@@ -206,6 +207,7 @@ function closeWindow() {
 }
 
 function onShown() {
+  vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, true);
   const shouldKeep = (behavior: PanelBehavior) => behavior === "keep";
   const shouldHide = (behavior: PanelBehavior) =>
     behavior === "hide" || behavior === "hideRestore";
@@ -247,6 +249,7 @@ function onShown() {
 }
 
 function onHide() {
+  vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, false);
   // Restore panels
   const shouldRestore = (behavior: PanelBehavior) => behavior === "hideRestore";
 
