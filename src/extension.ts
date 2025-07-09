@@ -125,7 +125,15 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  context.subscriptions.push(disposable);
+  const updateLazyGitFocusContext = () => {
+    vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, windowFocused());
+  };
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(updateLazyGitFocusContext),
+    vscode.window.onDidChangeActiveTerminal(updateLazyGitFocusContext),
+    disposable
+  );
 }
 
 export function deactivate() {}
@@ -207,7 +215,6 @@ function closeWindow() {
 }
 
 function onShown() {
-  vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, true);
   const shouldKeep = (behavior: PanelBehavior) => behavior === "keep";
   const shouldHide = (behavior: PanelBehavior) =>
     behavior === "hide" || behavior === "hideRestore";
@@ -249,7 +256,6 @@ function onShown() {
 }
 
 function onHide() {
-  vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, false);
   // Restore panels
   const shouldRestore = (behavior: PanelBehavior) => behavior === "hideRestore";
 
