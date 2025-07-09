@@ -42,6 +42,7 @@ Default cmd is ctrl+shift+l which may be captured by the shell. Ensure the follo
 Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle LazyGit
 
 - `lazygit-vscode.toggle`: Toggle LazyGit
+- `lazygitFocus`: When clause for your keybindings.
 
 ## Extension Settings
 
