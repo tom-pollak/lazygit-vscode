@@ -9,6 +9,7 @@ import assert = require("assert");
 let lazyGitTerminal: vscode.Terminal | undefined;
 let globalConfig: LazyGitConfig;
 let globalConfigJSON: string;
+const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
 
 /* --- Config --- */
 
@@ -124,7 +125,15 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  context.subscriptions.push(disposable);
+  const updateLazyGitFocusContext = () => {
+    vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, windowFocused());
+  };
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(updateLazyGitFocusContext),
+    vscode.window.onDidChangeActiveTerminal(updateLazyGitFocusContext),
+    disposable
+  );
 }
 
 export function deactivate() {}
