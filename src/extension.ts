@@ -6,10 +6,12 @@ import * as process from "process";
 import { exec } from "child_process";
 import assert = require("assert");
 
+const LAZYGIT_TOGGLE_COMMAND = "lazygit-vscode.toggle";
+const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
+
 let lazyGitTerminal: vscode.Terminal | undefined;
 let globalConfig: LazyGitConfig;
 let globalConfigJSON: string;
-const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
 
 /* --- Config --- */
 
@@ -107,32 +109,29 @@ async function loadExtension() {
 /* --- Events --- */
 
 export async function activate(context: vscode.ExtensionContext) {
-  let disposable = vscode.commands.registerCommand(
-    "lazygit-vscode.toggle",
-    async () => {
-      if (lazyGitTerminal) {
-        if (windowFocused()) {
-          closeWindow();
-          onHide();
-        } else {
-          focusWindow();
-          onShown();
-        }
-      } else {
-        await createWindow();
+  async function toggleLazyGit() {
+    if (lazyGitTerminal) {
+      if (windowFocused()) { // Hide
+        closeWindow();
+        onHide();
+      } else { // Show
+        focusWindow();
         onShown();
       }
+    } else { // No lazyGitTerminal, create new one.
+      await createWindow();
+      onShown();
     }
-  );
+  }
 
   const updateLazyGitFocusContext = () => {
     vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, windowFocused());
   };
 
   context.subscriptions.push(
+    vscode.commands.registerCommand(LAZYGIT_TOGGLE_COMMAND, toggleLazyGit)
     vscode.window.onDidChangeActiveTextEditor(updateLazyGitFocusContext),
     vscode.window.onDidChangeActiveTerminal(updateLazyGitFocusContext),
-    disposable
   );
 }
 
