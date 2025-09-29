@@ -129,7 +129,7 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(LAZYGIT_TOGGLE_COMMAND, toggleLazyGit)
+    vscode.commands.registerCommand(LAZYGIT_TOGGLE_COMMAND, toggleLazyGit),
     vscode.window.onDidChangeActiveTextEditor(updateLazyGitFocusContext),
     vscode.window.onDidChangeActiveTerminal(updateLazyGitFocusContext),
   );
