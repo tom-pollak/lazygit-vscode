@@ -99,6 +99,12 @@
           "scope": "window",
           "default": false
         },
+        "lazygit-vscode.venvActivationDelay": {
+          "type": "number",
+          "description": "Delay in milliseconds to wait for Python virtual environment activation before launching lazygit",
+          "scope": "window",
+          "default": 750
+        },
         "lazygit-vscode.autoHideSideBar": {
           "type": "boolean",
           "description": "Auto-hide the side bar when showing lazygit",

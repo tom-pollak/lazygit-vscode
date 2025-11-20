@@ -28,6 +28,7 @@ interface LazyGitConfig {
   configPath: string;
   autoMaximizeWindow: boolean;
   panels: PanelOptions;
+  venvActivationDelay: number;
 }
 
 function loadConfig(): LazyGitConfig {
@@ -61,6 +62,7 @@ function loadConfig(): LazyGitConfig {
       panel: getPanelBehavior("panel"),
       secondarySidebar: getPanelBehavior("secondarySidebar"),
     },
+    venvActivationDelay: config.get<number>("venvActivationDelay", 750),
   };
 }
 
@@ -150,6 +152,10 @@ async function createWindow() {
     lazyGitCommand += ` --use-config-file="${globalConfig.configPath}"`;
   }
 
+  // Check if Python venv activation is enabled
+  const pythonConfig = vscode.workspace.getConfiguration("python");
+  const activateEnvironment = pythonConfig.get<boolean>("terminal.activateEnvironment", true);
+
   const env: { [key: string]: string } = {};
   try {
     let codePath = await findExecutableOnPath("code");
@@ -160,22 +166,53 @@ async function createWindow() {
     );
   }
 
-  lazyGitTerminal = vscode.window.createTerminal({
-    name: "LazyGit",
-    cwd: workspaceFolder,
-    shellPath:
-      process.platform === "win32"
-        ? "powershell.exe"
-        : await findExecutableOnPath("bash"),
-    shellArgs:
-      process.platform === "win32"
-        ? ["/c", lazyGitCommand]
-        : ["-c", lazyGitCommand],
-    location: vscode.TerminalLocation.Editor,
-    env: env,
-  });
+  if (activateEnvironment) {
+    // Venv activation is enabled: create terminal without immediate lazygit execution
+    // Wait for venv activation, then launch lazygit
+    lazyGitTerminal = vscode.window.createTerminal({
+      name: "LazyGit",
+      cwd: workspaceFolder,
+      shellPath:
+        process.platform === "win32"
+          ? "powershell.exe"
+          : await findExecutableOnPath("bash"),
+      shellArgs: [],
+      location: vscode.TerminalLocation.Editor,
+      env: env,
+    });
 
-  focusWindow();
+    focusWindow();
+
+    // Wait for VS Code Python extension to complete venv activation
+    // The Python extension automatically injects the venv activation command when the terminal is created
+    // A short delay after terminal creation is sufficient for the activation to complete
+    setTimeout(() => {
+      if (lazyGitTerminal) {
+        // Append exit command to close terminal when lazygit exits
+        // Works for both bash/zsh (Unix) and PowerShell (Windows)
+        const exitCommand = process.platform === "win32" ? "; exit" : "; exit";
+        lazyGitTerminal.sendText(`${lazyGitCommand}${exitCommand}`);
+      }
+    }, globalConfig.venvActivationDelay);
+  } else {
+    // Venv activation is disabled: launch lazygit immediately
+    lazyGitTerminal = vscode.window.createTerminal({
+      name: "LazyGit",
+      cwd: workspaceFolder,
+      shellPath:
+        process.platform === "win32"
+          ? "powershell.exe"
+          : await findExecutableOnPath("bash"),
+      shellArgs:
+        process.platform === "win32"
+          ? ["/c", lazyGitCommand]
+          : ["-c", lazyGitCommand],
+      location: vscode.TerminalLocation.Editor,
+      env: env,
+    });
+
+    focusWindow();
+  }
 
   // lazygit window closes, unlink and focus on editor (where lazygit was)
   vscode.window.onDidCloseTerminal((terminal) => {
