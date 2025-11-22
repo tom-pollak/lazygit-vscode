@@ -166,52 +166,38 @@ async function createWindow() {
     );
   }
 
+  // Determine shellArgs based on venv activation
+  // If venv activation is enabled, use empty shellArgs and send command after delay
+  // Otherwise, pass command directly to shell for immediate execution
+  const shellArgs = activateEnvironment
+    ? []
+    : process.platform === "win32"
+    ? ["/c", lazyGitCommand]
+    : ["-c", lazyGitCommand];
+
+  lazyGitTerminal = vscode.window.createTerminal({
+    name: "LazyGit",
+    cwd: workspaceFolder,
+    shellPath:
+      process.platform === "win32"
+        ? "powershell.exe"
+        : await findExecutableOnPath("bash"),
+    shellArgs: shellArgs,
+    location: vscode.TerminalLocation.Editor,
+    env: env,
+  });
+
+  focusWindow();
+
+  // If venv activation is enabled, wait for Python extension to inject activation
+  // then send lazygit command
   if (activateEnvironment) {
-    // Venv activation is enabled: create terminal without immediate lazygit execution
-    // Wait for venv activation, then launch lazygit
-    lazyGitTerminal = vscode.window.createTerminal({
-      name: "LazyGit",
-      cwd: workspaceFolder,
-      shellPath:
-        process.platform === "win32"
-          ? "powershell.exe"
-          : await findExecutableOnPath("bash"),
-      shellArgs: [],
-      location: vscode.TerminalLocation.Editor,
-      env: env,
-    });
-
-    focusWindow();
-
-    // Wait for VS Code Python extension to complete venv activation
-    // The Python extension automatically injects the venv activation command when the terminal is created
-    // A short delay after terminal creation is sufficient for the activation to complete
     setTimeout(() => {
       if (lazyGitTerminal) {
-        // Append exit command to close terminal when lazygit exits
-        // Works for both bash/zsh (Unix) and PowerShell (Windows)
         const exitCommand = process.platform === "win32" ? "; exit" : "; exit";
         lazyGitTerminal.sendText(`${lazyGitCommand}${exitCommand}`);
       }
     }, globalConfig.venvActivationDelay);
-  } else {
-    // Venv activation is disabled: launch lazygit immediately
-    lazyGitTerminal = vscode.window.createTerminal({
-      name: "LazyGit",
-      cwd: workspaceFolder,
-      shellPath:
-        process.platform === "win32"
-          ? "powershell.exe"
-          : await findExecutableOnPath("bash"),
-      shellArgs:
-        process.platform === "win32"
-          ? ["/c", lazyGitCommand]
-          : ["-c", lazyGitCommand],
-      location: vscode.TerminalLocation.Editor,
-      env: env,
-    });
-
-    focusWindow();
   }
 
   // lazygit window closes, unlink and focus on editor (where lazygit was)
