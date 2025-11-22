@@ -28,6 +28,7 @@ interface LazyGitConfig {
   configPath: string;
   autoMaximizeWindow: boolean;
   panels: PanelOptions;
+  venvActivationDelay: number;
 }
 
 function loadConfig(): LazyGitConfig {
@@ -61,6 +62,7 @@ function loadConfig(): LazyGitConfig {
       panel: getPanelBehavior("panel"),
       secondarySidebar: getPanelBehavior("secondarySidebar"),
     },
+    venvActivationDelay: config.get<number>("venvActivationDelay", 100),
   };
 }
 
@@ -150,6 +152,10 @@ async function createWindow() {
     lazyGitCommand += ` --use-config-file="${globalConfig.configPath}"`;
   }
 
+  // Check if Python venv activation is enabled
+  const pythonConfig = vscode.workspace.getConfiguration("python");
+  const activateEnvironment = pythonConfig.get<boolean>("terminal.activateEnvironment", true);
+
   const env: { [key: string]: string } = {};
   try {
     let codePath = await findExecutableOnPath("code");
@@ -160,6 +166,15 @@ async function createWindow() {
     );
   }
 
+  // Determine shellArgs based on venv activation
+  // If venv activation is enabled, use empty shellArgs and send command after delay
+  // Otherwise, pass command directly to shell for immediate execution
+  const shellArgs = activateEnvironment
+    ? []
+    : process.platform === "win32"
+    ? ["/c", lazyGitCommand]
+    : ["-c", lazyGitCommand];
+
   lazyGitTerminal = vscode.window.createTerminal({
     name: "LazyGit",
     cwd: workspaceFolder,
@@ -167,15 +182,23 @@ async function createWindow() {
       process.platform === "win32"
         ? "powershell.exe"
         : await findExecutableOnPath("bash"),
-    shellArgs:
-      process.platform === "win32"
-        ? ["/c", lazyGitCommand]
-        : ["-c", lazyGitCommand],
+    shellArgs: shellArgs,
     location: vscode.TerminalLocation.Editor,
     env: env,
   });
 
   focusWindow();
+
+  // If venv activation is enabled, wait for Python extension to inject activation
+  // then send lazygit command
+  if (activateEnvironment) {
+    setTimeout(() => {
+      if (lazyGitTerminal) {
+        const exitCommand = process.platform === "win32" ? "; exit" : "; exit";
+        lazyGitTerminal.sendText(`${lazyGitCommand}${exitCommand}`);
+      }
+    }, globalConfig.venvActivationDelay);
+  }
 
   // lazygit window closes, unlink and focus on editor (where lazygit was)
   vscode.window.onDidCloseTerminal((terminal) => {

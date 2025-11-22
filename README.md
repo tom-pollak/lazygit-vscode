@@ -26,7 +26,10 @@ This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/maste
 
 ### Known Issues
 
-**Python virtualenv interference**: If LazyGit immediately opens a "Stash Changes" dialog when launched from VS Code with an active Python environment, disable automatic Python activation in terminals:
+**Python virtualenv interference**: If `python.terminal.activateEnvironment` is true in the settings, this extension will delay the launch of LazyGit by a fixed time, allowing vscode to start the python virtualenv. The delay is configurable via `lazygit-vscode.venvActivationDelay` (default: 100ms). If you still experience issues, you can:
+
+1. Increase the delay setting if your environment takes longer to activate
+2. Disable automatic Python activation in terminals:
 
 ```json
 "python.terminal.activateEnvironment": false
@@ -59,6 +62,7 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 - `lazygit-vscode.lazygitPath`: Manually set LazyGit path. Otherwise use default system PATH.
 - `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you like different behaviour between VSCode and CLI.
 - `lazygit-vscode.autoMaximizeWindow`: Maximize the lazygit window in the editor (keeps sidebar visible). Useful when working with split editors.
+- `lazygit-vscode.venvActivationDelay`: Delay in milliseconds to wait for Python virtual environment activation before launching lazygit (default: 750). Increase this value if your Python environment takes longer to activate.
 
 ### Panel Behavior
 
