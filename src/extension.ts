@@ -315,8 +315,14 @@ function expandPath(pth: string): string {
 function getWorkspaceFolder(): string {
   const activeDocumentUri = vscode.window.activeTextEditor?.document.uri;
   let workspaceFolder: vscode.WorkspaceFolder | undefined;
-  if (activeDocumentUri) workspaceFolder = vscode.workspace.getWorkspaceFolder(activeDocumentUri);
-  workspaceFolder ??= vscode.workspace.workspaceFolders?.[0];
+
+  if (activeDocumentUri) {
+    workspaceFolder = vscode.workspace.getWorkspaceFolder(activeDocumentUri);
+  }
+
+  if (!workspaceFolder) {
+    workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  }
 
   return workspaceFolder?.uri.fsPath ?? os.homedir();
 }
