@@ -26,7 +26,7 @@ This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/maste
 
 ### Known Issues
 
-**Python virtualenv interference**: If `python.terminal.activateEnvironment` is true in the settings, this extension will delay the launch of LazyGit by a fixed time, allowing vscode to start the python virtualenv. The delay is configurable via `lazygit-vscode.venvActivationDelay` (default: 750ms). If you still experience issues, you can:
+**Python virtualenv interference**: If `python.terminal.activateEnvironment` is true in the settings, this extension will delay the launch of LazyGit by a fixed time, allowing vscode to start the python virtualenv. The delay is configurable via `lazygit-vscode.venvActivationDelay` (default: 100ms). If you still experience issues, you can:
 
 1. Increase the delay setting if your environment takes longer to activate
 2. Disable automatic Python activation in terminals:
