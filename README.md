@@ -36,6 +36,8 @@ VSCode doesn't offer an API for checking sidebar visibility ([issue](https://git
 
 For perfect consistency where no sidepanel is touched, use `autoMaximizeWindow: false` and set all panels to `"keep"`.
 
+Created VSCode issue to track: https://github.com/microsoft/vscode/issues/283331
+
 #### Python virtualenv
 
 **Python virtualenv interference**: If `python.terminal.activateEnvironment` is true in the settings, this extension will delay the launch of LazyGit by a fixed time, allowing vscode to start the python virtualenv. The delay is configurable via `lazygit-vscode.venvActivationDelay` (default: 100ms). If you still experience issues, you can:
