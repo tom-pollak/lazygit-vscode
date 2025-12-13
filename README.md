@@ -26,6 +26,18 @@ This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/maste
 
 ### Known Issues
 
+#### Sidebar show/hide inconsistencies
+
+VSCode doesn't offer an API for checking sidebar visibility ([issue](https://github.com/microsoft/vscode/issues/186581)), so `autoMaximizeWindow` and `lazygit-vscode.panels` settings may cause inconsistencies:
+
+- `keep` with `autoMaximizeWindow` will always reopen the sidebar, even if it was already hidden
+- `hideRestore` will always restore the sidebar on close, even if it was already hidden
+- `secondarySidebar` defaults to `"hide"`, so it will always be hidden when toggling lazygit
+
+For perfect consistency where no sidepanel is touched, use `autoMaximizeWindow: false` and set all panels to `"keep"`.
+
+#### Python virtualenv
+
 **Python virtualenv interference**: If `python.terminal.activateEnvironment` is true in the settings, this extension will delay the launch of LazyGit by a fixed time, allowing vscode to start the python virtualenv. The delay is configurable via `lazygit-vscode.venvActivationDelay` (default: 100ms). If you still experience issues, you can:
 
 1. Increase the delay setting if your environment takes longer to activate
@@ -35,7 +47,7 @@ This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/maste
 "python.terminal.activateEnvironment": false
 ```
 
-### Notes on Windows
+#### Integrated shell keybindings
 
 Default cmd is ctrl+shift+l which may be captured by the shell. Ensure the following config
 
