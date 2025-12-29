@@ -103,7 +103,7 @@
           "type": "number",
           "description": "Delay in milliseconds to wait for Python virtual environment activation before launching lazygit",
           "scope": "window",
-          "default": 100
+          "default": 200
         },
         "lazygit-vscode.autoHideSideBar": {
           "type": "boolean",

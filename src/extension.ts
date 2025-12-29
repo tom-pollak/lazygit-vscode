@@ -62,7 +62,7 @@ function loadConfig(): LazyGitConfig {
       panel: getPanelBehavior("panel"),
       secondarySidebar: getPanelBehavior("secondarySidebar"),
     },
-    venvActivationDelay: config.get<number>("venvActivationDelay", 100),
+    venvActivationDelay: config.get<number>("venvActivationDelay", 200),
   };
 }
 
