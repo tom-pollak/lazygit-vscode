@@ -317,7 +317,7 @@ function findExecutableOnPath(executable: string): Promise<string> {
     const command =
       process.platform === "win32"
         ? `where ${executable}`
-        : `cd ${workspaceFolder} && which ${executable}`;
+        : `cd "${workspaceFolder}" && which ${executable}`;
     exec(command, (error, stdout) => {
       if (error) reject(new Error(`${executable} not found on PATH`));
       else resolve(stdout.trim());
