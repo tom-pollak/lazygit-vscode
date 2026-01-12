@@ -137,7 +137,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() { }
+export function deactivate() {}
 
 /* ---  Window --- */
 
@@ -172,8 +172,8 @@ async function createWindow() {
   const shellArgs = activateEnvironment
     ? []
     : process.platform === "win32"
-      ? ["/c", lazyGitCommand]
-      : ["-c", lazyGitCommand];
+    ? ["/c", lazyGitCommand]
+    : ["-c", lazyGitCommand];
 
   lazyGitTerminal = vscode.window.createTerminal({
     name: "LazyGit",
@@ -301,7 +301,7 @@ function onHide() {
   // Editor Focus -- panel / auxiliaryBar will take focus so short delay required
   const timeoutValue =
     globalConfig.panels.panel === "hideRestore" ||
-      globalConfig.panels.secondarySidebar === "hideRestore"
+    globalConfig.panels.secondarySidebar === "hideRestore"
       ? 200
       : 0;
   setTimeout(() => {
