@@ -99,11 +99,42 @@
           "scope": "window",
           "default": false
         },
+        "lazygit-vscode.lazygitKeybindings": {
+          "type": "object",
+          "description": "Custom Lazygit keybindings to apply when running inside VS Code. For example, map 'q' to 'toggle' (hide) Lazygit, and 'Q' to quit.",
+          "properties": {
+            "toggle": {
+              "type": "string",
+              "description": "Keybinding to toggle (essentially meaning hide) Lazygit (e.g., 'q')",
+              "default": ""
+            },
+            "quit": {
+              "type": "string",
+              "description": "Keybinding to quit Lazygit (e.g., 'Q')",
+              "default": ""
+            }
+          }
+        },
         "lazygit-vscode.venvActivationDelay": {
           "type": "number",
           "description": "Delay in milliseconds to wait for Python virtual environment activation before launching lazygit",
           "scope": "window",
           "default": 200
+        },
+        "lazygit-vscode.autoConfigLazygitEditor": {
+          "type": "string",
+          "enum": [
+            "off",
+            "cli",
+            "urlScheme"
+          ],
+          "default": "cli",
+          "description": "Makes lazygit use the hosting editor (VS Code or its fork) for editing files. Your lazygit config file is not affected.",
+          "enumDescriptions": [
+            "Disable editor integration. Lazygit uses its own configured editor.",
+            "Use VS Code CLI interface (e.g., `code -rg file:123`).",
+            "Use VS Code URL scheme (e.g., `vscode://file/...`). Can be much faster on some platforms."
+          ]
         },
         "lazygit-vscode.autoHideSideBar": {
           "type": "boolean",

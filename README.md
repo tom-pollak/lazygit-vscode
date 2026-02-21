@@ -12,7 +12,18 @@ https://github.com/tom-pollak/lazygit-vscode/assets/26611948/5924db82-7937-4ed9-
 
 ## VSCode integration
 
-Set the following in your [LazyGit config](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md) for VSCode support:
+### Automatic Configuration
+
+The extension can automatically configure Lazygit specifically when it's run from within VS Code, without affecting your normal LazyGit config files. This extra config includes:
+
+- Making Lazygit use VS Code (or its fork) as its editor (`e` keybinding), enabled by default
+- Adding a keybinding of your choice (e.g. `q`) to hide Lazygit and overriding the existing `quit` keybinding (e.g. `Q`)
+
+For more details, please refer to the [Extension Settings](#extension-settings) section below.
+
+### Manual Configuration
+
+If you prefer manual configuration, you can set `lazygit-vscode.autoConfigLazygitEditor` to `"off"` and set the following in your [LazyGit config](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md) for VS Code support:
 
 ```yaml
 os:
@@ -77,6 +88,29 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 - `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you like different behaviour between VSCode and CLI.
 - `lazygit-vscode.autoMaximizeWindow`: Maximize the lazygit window in the editor (keeps sidebar visible). Useful when working with split editors.
 - `lazygit-vscode.venvActivationDelay`: Delay in milliseconds to wait for Python virtual environment activation before launching lazygit (default: 100). Increase this value if your Python environment takes longer to activate.
+
+### Automatic Editor Configuration
+
+- `lazygit-vscode.autoConfigLazygitEditor`: Automatically configure Lazygit to use VS Code as its editor (only when run from within VS Code). This is enabled by default. Available options:
+  - `"off"`: Disable automatic Lazygit editor configuration.
+  - `"cli"`: Use VS Code's CLI interface to open files for editing (default).
+  - `"urlScheme"`: Use VS Code's URL scheme to open files for editing. Can be much faster, at least on some platforms (e.g., macOS).
+
+### Lazygit Keybindings
+
+- `lazygit-vscode.lazygitKeybindings`: Custom keybindings to apply when running Lazygit from within VS Code. None are set by default. Available options:
+  - `"toggle"`: Toggle the visibility of the Lazygit panel. Since this action is triggered when the panel is focused, it effectively hides it.
+  - `"quit"`: Quit Lazygit.
+
+Example:
+```json
+"lazygit-vscode.lazygitKeybindings": {
+  "toggle": "q",
+  "quit": "Q"
+}
+```
+
+This rebinds the `q` key to hide Lazygit (instead of quitting it), and `Q` to quit it. Makes it a joy to use with Vim-style keybindings while saving some startup/teardown time and preserving Lazygit UI state.
 
 ### Panel Behavior
 
