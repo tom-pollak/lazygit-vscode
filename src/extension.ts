@@ -5,6 +5,7 @@ import * as path from "path";
 import * as process from "process";
 import { exec } from "child_process";
 import assert = require("assert");
+import * as yaml from "js-yaml";
 
 const LAZYGIT_TOGGLE_COMMAND = "lazygit-vscode.toggle";
 const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
@@ -377,6 +378,9 @@ function getWorkspaceFolder(): string {
 function getDefaultLazygitConfigPath(): string {
   switch (process.platform) {
     case "darwin":
+      if (process.env.XDG_CONFIG_HOME) {
+        return path.join(process.env.XDG_CONFIG_HOME, "lazygit", "config.yml");
+      }
       return path.join(os.homedir(), "Library", "Application Support", "lazygit", "config.yml");
     case "win32":
       return path.join(process.env.APPDATA || "", "lazygit", "config.yml");
@@ -395,20 +399,26 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   const ipcPath = path.join(tmpDir, `lazygit-vscode-ipc-${suffix}.tmp`);
   fs.writeFileSync(ipcPath, "");
 
+  const userConfigPath = globalConfig.configPath || getDefaultLazygitConfigPath();
+
   // Read the user's os config so we can preserve their settings.
   // Lazygit does a shallow merge on the os section, so our overlay would wipe out
   // editAtLineAndWait, editInTerminal, openDirInEditor, etc. if we don't include them.
-  const userOsFields = getUserOsConfig();
-  const osFields: Record<string, string> = { ...userOsFields };
-  osFields.edit = `'printf "%s\\t0\\n" "{{filename}}" >> "${ipcPath}"'`;
-  osFields.editAtLine = `'printf "%s\\t%s\\n" "{{filename}}" "{{line}}" >> "${ipcPath}"'`;
-
-  const overlayLines = ["os:"];
-  for (const [key, value] of Object.entries(osFields)) {
-    overlayLines.push(`  ${key}: ${value}`);
+  let userOsFields: Record<string, any> = {};
+  if (fs.existsSync(userConfigPath)) {
+    try {
+      const parsed = yaml.load(fs.readFileSync(userConfigPath, "utf8")) as Record<string, any> | null;
+      userOsFields = parsed?.os ?? {};
+    } catch {}
   }
-  overlayLines.push("promptToReturnFromSubprocess: false");
-  const overlayYaml = overlayLines.join("\n") + "\n";
+
+  // Override edit and editAtLine with IPC commands
+  const osFields = { ...userOsFields };
+  osFields.edit = `printf "%s\\t0\\n" "{{filename}}" >> "${ipcPath}"`;
+  osFields.editAtLine = `printf "%s\\t%s\\n" "{{filename}}" "{{line}}" >> "${ipcPath}"`;
+
+  const overlayConfig: Record<string, any> = { os: osFields, promptToReturnFromSubprocess: false };
+  const overlayYaml = yaml.dump(overlayConfig);
 
   const overlayPath = path.join(tmpDir, `lazygit-vscode-config-${suffix}.yml`);
   fs.writeFileSync(overlayPath, overlayYaml);
@@ -416,52 +426,12 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   // --use-config-file replaces the default config, so include user/default config first,
   // then overlay last (takes priority via lazygit's comma-separated merge)
   const configFiles: string[] = [];
-  if (globalConfig.configPath) {
-    configFiles.push(globalConfig.configPath);
-  } else {
-    const defaultPath = getDefaultLazygitConfigPath();
-    if (fs.existsSync(defaultPath)) {
-      configFiles.push(defaultPath);
-    }
+  if (fs.existsSync(userConfigPath)) {
+    configFiles.push(userConfigPath);
   }
   configFiles.push(overlayPath);
 
   return { ipcPath, overlayPath, configFileArg: configFiles.join(",") };
-}
-
-function getUserOsConfig(): Record<string, string> {
-  const configPath = globalConfig.configPath || getDefaultLazygitConfigPath();
-  if (!configPath || !fs.existsSync(configPath)) return {};
-
-  try {
-    const content = fs.readFileSync(configPath, "utf8");
-    return parseOsSection(content);
-  } catch {
-    return {};
-  }
-}
-
-function parseOsSection(content: string): Record<string, string> {
-  const lines = content.split("\n");
-  const fields: Record<string, string> = {};
-  let inOs = false;
-
-  for (const line of lines) {
-    if (/^os:/.test(line)) {
-      inOs = true;
-      continue;
-    }
-    if (inOs) {
-      // New top-level key — end of os section
-      if (/^\S/.test(line) && line.trim() !== "") break;
-      const match = line.match(/^\s+(\w+):\s*(.+)/);
-      if (match) {
-        fields[match[1]] = match[2];
-      }
-    }
-  }
-
-  return fields;
 }
 
 function startIpcWatcher(ipcPath: string) {

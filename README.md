@@ -14,7 +14,7 @@ https://github.com/tom-pollak/lazygit-vscode/assets/26611948/5924db82-7937-4ed9-
 
 File opening works out of the box -- pressing `e` in lazygit opens files directly in VSCode. No manual lazygit config is needed.
 
-Under the hood, the extension automatically configures lazygit's edit commands via an overlay config, using IPC to open files through the VSCode API instead of the `code` CLI. This also handles `editAtLineAndWait` (e.g. interactive rebase) by blocking until you close the file tab.
+Under the hood, the extension automatically configures lazygit's edit commands via an overlay config, using IPC to open files through the VSCode API instead of the `code` CLI.
 
 To disable this and fall back to the `code` CLI approach, set `lazygit-vscode.nativeFileOpening` to `false` and configure your [lazygit config](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md) manually:
 
