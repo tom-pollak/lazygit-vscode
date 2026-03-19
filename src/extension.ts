@@ -5,7 +5,7 @@ import * as path from "path";
 import * as process from "process";
 import { exec } from "child_process";
 import assert = require("assert");
-import * as yaml from "js-yaml";
+
 
 const LAZYGIT_TOGGLE_COMMAND = "lazygit-vscode.toggle";
 const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
@@ -390,16 +390,16 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   const ipcPath = path.join(tmpDir, `lazygit-vscode-ipc-${suffix}.tmp`);
   fs.writeFileSync(ipcPath, "");
 
-  const overlayConfig = {
-    os: {
-      edit: `printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"`,
-      editAtLine: `printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"`,
-    },
-    promptToReturnFromSubprocess: false,
-  };
+  const overlayYaml = [
+    "os:",
+    `  edit: 'printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"'`,
+    `  editAtLine: 'printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"'`,
+    "promptToReturnFromSubprocess: false",
+    "",
+  ].join("\n");
 
   const overlayPath = path.join(tmpDir, `lazygit-vscode-config-${suffix}.yml`);
-  fs.writeFileSync(overlayPath, yaml.dump(overlayConfig));
+  fs.writeFileSync(overlayPath, overlayYaml);
 
   // --use-config-file replaces the default config, so include user config first,
   // then overlay (later files take priority via lazygit's deep merge)

@@ -135,15 +135,11 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/js-yaml": "^4.0.9",
     "@types/node": "18.x",
     "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "eslint": "^8.56.0",
     "typescript": "^5.3.3"
-  },
-  "dependencies": {
-    "js-yaml": "^4.1.1"
   }
 }
