@@ -147,10 +147,6 @@ async function createWindow() {
   const workspaceFolder = getWorkspaceFolder();
 
   assert(globalConfig.lazyGitPath, "Uncaught error: lazygitpath is undefined!");
-  let lazyGitCommand = globalConfig.lazyGitPath;
-  if (globalConfig.configPath) {
-    lazyGitCommand += ` --use-config-file="${globalConfig.configPath}"`;
-  }
 
   // Check if Python venv activation is enabled
   const pythonConfig = vscode.workspace.getConfiguration("python");
@@ -166,38 +162,43 @@ async function createWindow() {
     );
   }
 
-  // Determine shellArgs based on venv activation
-  // If venv activation is enabled, use empty shellArgs and send command after delay
-  // Otherwise, pass command directly to shell for immediate execution
-  const shellArgs = activateEnvironment
-    ? []
-    : process.platform === "win32"
-    ? ["/c", lazyGitCommand]
-    : ["-c", lazyGitCommand];
-
-  lazyGitTerminal = vscode.window.createTerminal({
-    name: "LazyGit",
-    cwd: workspaceFolder,
-    shellPath:
-      process.platform === "win32"
-        ? "powershell.exe"
-        : await findExecutableOnPath("bash"),
-    shellArgs: shellArgs,
-    location: vscode.TerminalLocation.Editor,
-    env: env,
-  });
-
-  focusWindow();
-
-  // If venv activation is enabled, wait for Python extension to inject activation
-  // then send lazygit command
   if (activateEnvironment) {
+    // Use default shell so Python extension can inject venv activation
+    let lazyGitCommand = globalConfig.lazyGitPath;
+    if (globalConfig.configPath) {
+      lazyGitCommand += ` --use-config-file="${globalConfig.configPath}"`;
+    }
+
+    lazyGitTerminal = vscode.window.createTerminal({
+      name: "LazyGit",
+      cwd: workspaceFolder,
+      location: vscode.TerminalLocation.Editor,
+      env: env,
+    });
+
+    focusWindow();
+
     setTimeout(() => {
       if (lazyGitTerminal) {
-        const exitCommand = process.platform === "win32" ? "; exit" : "; exit";
-        lazyGitTerminal.sendText(`${lazyGitCommand}${exitCommand}`);
+        lazyGitTerminal.sendText(`${lazyGitCommand}; exit`);
       }
     }, globalConfig.venvActivationDelay);
+  } else {
+    const shellArgs: string[] = [];
+    if (globalConfig.configPath) {
+      shellArgs.push(`--use-config-file=${globalConfig.configPath}`);
+    }
+
+    lazyGitTerminal = vscode.window.createTerminal({
+      name: "LazyGit",
+      cwd: workspaceFolder,
+      shellPath: globalConfig.lazyGitPath,
+      shellArgs: shellArgs,
+      location: vscode.TerminalLocation.Editor,
+      env: env,
+    });
+
+    focusWindow();
   }
 
   // lazygit window closes, unlink and focus on editor (where lazygit was)
