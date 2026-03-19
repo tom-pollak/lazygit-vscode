@@ -32,6 +32,7 @@ interface LazyGitConfig {
   autoMaximizeWindow: boolean;
   panels: PanelOptions;
   venvActivationDelay: number;
+  nativeFileOpening: boolean;
 }
 
 function loadConfig(): LazyGitConfig {
@@ -66,6 +67,7 @@ function loadConfig(): LazyGitConfig {
       secondarySidebar: getPanelBehavior("secondarySidebar"),
     },
     venvActivationDelay: config.get<number>("venvActivationDelay", 200),
+    nativeFileOpening: config.get<boolean>("nativeFileOpening", true),
   };
 }
 
@@ -153,12 +155,31 @@ async function createWindow() {
 
   assert(globalConfig.lazyGitPath, "Uncaught error: lazygitpath is undefined!");
 
-  // Set up IPC for file opening
+  // Set up IPC for native file opening, or fall back to code CLI
   cleanupIpc();
-  const ipc = setupIpc();
-  ipcFilePath = ipc.ipcPath;
-  overlayConfigPath = ipc.overlayPath;
-  startIpcWatcher(ipc.ipcPath);
+  let configFileArg: string | undefined;
+  const env: { [key: string]: string } = {};
+
+  if (globalConfig.nativeFileOpening) {
+    const ipc = setupIpc();
+    ipcFilePath = ipc.ipcPath;
+    overlayConfigPath = ipc.overlayPath;
+    configFileArg = ipc.configFileArg;
+    startIpcWatcher(ipc.ipcPath);
+  } else {
+    // Legacy: find 'code' CLI and add to PATH for lazygit's editPreset
+    try {
+      const codePath = await findExecutableOnPath("code");
+      env.PATH = `${path.dirname(codePath)}${path.delimiter}${process.env.PATH}`;
+    } catch {
+      vscode.window.showWarningMessage(
+        "Could not find 'code' on PATH. Set `editPreset: \"vscode\"` in your lazygit config and ensure 'code' is available, or enable `lazygit-vscode.nativeFileOpening`."
+      );
+    }
+    if (globalConfig.configPath) {
+      configFileArg = globalConfig.configPath;
+    }
+  }
 
   // Check if Python venv activation is enabled
   const pythonConfig = vscode.workspace.getConfiguration("python");
@@ -166,12 +187,16 @@ async function createWindow() {
 
   if (activateEnvironment) {
     // Use default shell so Python extension can inject venv activation
-    const lazyGitCommand = `"${globalConfig.lazyGitPath}" --use-config-file="${ipc.configFileArg}"`;
+    let lazyGitCommand = `"${globalConfig.lazyGitPath}"`;
+    if (configFileArg) {
+      lazyGitCommand += ` --use-config-file="${configFileArg}"`;
+    }
 
     lazyGitTerminal = vscode.window.createTerminal({
       name: "LazyGit",
       cwd: workspaceFolder,
       location: vscode.TerminalLocation.Editor,
+      env: env,
     });
 
     focusWindow();
@@ -182,12 +207,18 @@ async function createWindow() {
       }
     }, globalConfig.venvActivationDelay);
   } else {
+    const shellArgs: string[] = [];
+    if (configFileArg) {
+      shellArgs.push(`--use-config-file=${configFileArg}`);
+    }
+
     lazyGitTerminal = vscode.window.createTerminal({
       name: "LazyGit",
       cwd: workspaceFolder,
       shellPath: globalConfig.lazyGitPath,
-      shellArgs: [`--use-config-file=${ipc.configFileArg}`],
+      shellArgs: shellArgs,
       location: vscode.TerminalLocation.Editor,
+      env: env,
     });
 
     focusWindow();

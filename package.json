@@ -93,6 +93,12 @@
             }
           }
         },
+        "lazygit-vscode.nativeFileOpening": {
+          "type": "boolean",
+          "description": "Automatically handle file opening from lazygit using IPC instead of the 'code' CLI. When enabled, pressing 'e' opens files directly in VSCode without needing 'code' on PATH or 'editPreset: vscode' in your lazygit config.",
+          "scope": "window",
+          "default": true
+        },
         "lazygit-vscode.autoMaximizeWindow": {
           "type": "boolean",
           "description": "Maximize the lazygit window in editor",
