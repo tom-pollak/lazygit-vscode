@@ -395,15 +395,20 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   const ipcPath = path.join(tmpDir, `lazygit-vscode-ipc-${suffix}.tmp`);
   fs.writeFileSync(ipcPath, "");
 
-  // Overlay config: redirect lazygit's edit commands to write to the IPC file.
-  // editAtLineAndWait is left unset so it inherits from the user's config/preset.
-  const overlayYaml = [
-    "os:",
-    `  edit: 'printf "%s\\t0\\n" "{{filename}}" >> "${ipcPath}"'`,
-    `  editAtLine: 'printf "%s\\t%s\\n" "{{filename}}" "{{line}}" >> "${ipcPath}"'`,
-    "  editInTerminal: false",
-    "promptToReturnFromSubprocess: false",
-  ].join("\n") + "\n";
+  // Read the user's os config so we can preserve their settings.
+  // Lazygit does a shallow merge on the os section, so our overlay would wipe out
+  // editAtLineAndWait, editInTerminal, openDirInEditor, etc. if we don't include them.
+  const userOsFields = getUserOsConfig();
+  const osFields: Record<string, string> = { ...userOsFields };
+  osFields.edit = `'printf "%s\\t0\\n" "{{filename}}" >> "${ipcPath}"'`;
+  osFields.editAtLine = `'printf "%s\\t%s\\n" "{{filename}}" "{{line}}" >> "${ipcPath}"'`;
+
+  const overlayLines = ["os:"];
+  for (const [key, value] of Object.entries(osFields)) {
+    overlayLines.push(`  ${key}: ${value}`);
+  }
+  overlayLines.push("promptToReturnFromSubprocess: false");
+  const overlayYaml = overlayLines.join("\n") + "\n";
 
   const overlayPath = path.join(tmpDir, `lazygit-vscode-config-${suffix}.yml`);
   fs.writeFileSync(overlayPath, overlayYaml);
@@ -422,6 +427,41 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   configFiles.push(overlayPath);
 
   return { ipcPath, overlayPath, configFileArg: configFiles.join(",") };
+}
+
+function getUserOsConfig(): Record<string, string> {
+  const configPath = globalConfig.configPath || getDefaultLazygitConfigPath();
+  if (!configPath || !fs.existsSync(configPath)) return {};
+
+  try {
+    const content = fs.readFileSync(configPath, "utf8");
+    return parseOsSection(content);
+  } catch {
+    return {};
+  }
+}
+
+function parseOsSection(content: string): Record<string, string> {
+  const lines = content.split("\n");
+  const fields: Record<string, string> = {};
+  let inOs = false;
+
+  for (const line of lines) {
+    if (/^os:/.test(line)) {
+      inOs = true;
+      continue;
+    }
+    if (inOs) {
+      // New top-level key — end of os section
+      if (/^\S/.test(line) && line.trim() !== "") break;
+      const match = line.match(/^\s+(\w+):\s*(.+)/);
+      if (match) {
+        fields[match[1]] = match[2];
+      }
+    }
+  }
+
+  return fields;
 }
 
 function startIpcWatcher(ipcPath: string) {
