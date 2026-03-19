@@ -390,30 +390,20 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   const ipcPath = path.join(tmpDir, `lazygit-vscode-ipc-${suffix}.tmp`);
   fs.writeFileSync(ipcPath, "");
 
-  const userConfigPath = globalConfig.configPath || getDefaultLazygitConfigPath();
-
-  // Read the user's os config so we can preserve their settings.
-  // Lazygit does a shallow merge on the os section, so our overlay would wipe out
-  // editAtLineAndWait, editInTerminal, openDirInEditor, etc. if we don't include them.
-  let userOsFields: Record<string, any> = {};
-  if (fs.existsSync(userConfigPath)) {
-    const parsed = yaml.load(fs.readFileSync(userConfigPath, "utf8")) as Record<string, any> | null;
-    userOsFields = parsed?.os ?? {};
-  }
-
-  // Override edit and editAtLine with IPC commands
-  const osFields = { ...userOsFields };
-  osFields.edit = `printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"`;
-  osFields.editAtLine = `printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"`;
-
-  const overlayConfig: Record<string, any> = { os: osFields, promptToReturnFromSubprocess: false };
-  const overlayYaml = yaml.dump(overlayConfig);
+  const overlayConfig = {
+    os: {
+      edit: `printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"`,
+      editAtLine: `printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"`,
+    },
+    promptToReturnFromSubprocess: false,
+  };
 
   const overlayPath = path.join(tmpDir, `lazygit-vscode-config-${suffix}.yml`);
-  fs.writeFileSync(overlayPath, overlayYaml);
+  fs.writeFileSync(overlayPath, yaml.dump(overlayConfig));
 
-  // --use-config-file replaces the default config, so include user/default config first,
-  // then overlay last (takes priority via lazygit's comma-separated merge)
+  // --use-config-file replaces the default config, so include user config first,
+  // then overlay (later files take priority via lazygit's deep merge)
+  const userConfigPath = globalConfig.configPath || getDefaultLazygitConfigPath();
   const configFiles: string[] = [];
   if (fs.existsSync(userConfigPath)) {
     configFiles.push(userConfigPath);
