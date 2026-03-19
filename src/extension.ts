@@ -6,12 +6,14 @@ import * as process from "process";
 import { exec } from "child_process";
 import assert = require("assert");
 
+
 const LAZYGIT_TOGGLE_COMMAND = "lazygit-vscode.toggle";
 const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
 
 let lazyGitTerminal: vscode.Terminal | undefined;
 let globalConfig: LazyGitConfig;
 let globalConfigJSON: string;
+let ipcState: { ipcPath: string; overlayPath: string; watcher: fs.FSWatcher } | undefined;
 
 /* --- Config --- */
 
@@ -29,6 +31,7 @@ interface LazyGitConfig {
   autoMaximizeWindow: boolean;
   panels: PanelOptions;
   venvActivationDelay: number;
+  nativeFileOpening: boolean;
 }
 
 function loadConfig(): LazyGitConfig {
@@ -63,6 +66,7 @@ function loadConfig(): LazyGitConfig {
       secondarySidebar: getPanelBehavior("secondarySidebar"),
     },
     venvActivationDelay: config.get<number>("venvActivationDelay", 200),
+    nativeFileOpening: config.get<boolean>("nativeFileOpening", true),
   };
 }
 
@@ -137,7 +141,9 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {}
+export function deactivate() {
+  cleanupIpc();
+}
 
 /* ---  Window --- */
 
@@ -148,25 +154,31 @@ async function createWindow() {
 
   assert(globalConfig.lazyGitPath, "Uncaught error: lazygitpath is undefined!");
 
+  // Set up IPC for native file opening, or fall back to code CLI
+  cleanupIpc();
+  let configFileArg: string | undefined;
+  const env: { [key: string]: string } = {};
+
+  // Ensure the terminal inherits the extension host's full PATH
+  env.PATH = process.env.PATH || "";
+
+  if (globalConfig.nativeFileOpening) {
+    const ipc = setupIpc();
+    configFileArg = ipc.configFileArg;
+    ipcState = { ...ipc, watcher: startIpcWatcher(ipc.ipcPath) };
+  } else if (globalConfig.configPath) {
+    configFileArg = globalConfig.configPath;
+  }
+
   // Check if Python venv activation is enabled
   const pythonConfig = vscode.workspace.getConfiguration("python");
   const activateEnvironment = pythonConfig.get<boolean>("terminal.activateEnvironment", true);
 
-  const env: { [key: string]: string } = {};
-  try {
-    let codePath = await findExecutableOnPath("code");
-    env.PATH = `"${codePath}"${path.delimiter}${process.env.PATH}`;
-  } catch (error) {
-    vscode.window.showWarningMessage(
-      "Could not find 'code' on PATH. Opening vscode windows with `e` may not work properly."
-    );
-  }
-
   if (activateEnvironment) {
     // Use default shell so Python extension can inject venv activation
-    let lazyGitCommand = globalConfig.lazyGitPath;
-    if (globalConfig.configPath) {
-      lazyGitCommand += ` --use-config-file="${globalConfig.configPath}"`;
+    let lazyGitCommand = `"${globalConfig.lazyGitPath}"`;
+    if (configFileArg) {
+      lazyGitCommand += ` --use-config-file="${configFileArg}"`;
     }
 
     lazyGitTerminal = vscode.window.createTerminal({
@@ -185,8 +197,8 @@ async function createWindow() {
     }, globalConfig.venvActivationDelay);
   } else {
     const shellArgs: string[] = [];
-    if (globalConfig.configPath) {
-      shellArgs.push(`--use-config-file=${globalConfig.configPath}`);
+    if (configFileArg) {
+      shellArgs.push(`--use-config-file=${configFileArg}`);
     }
 
     lazyGitTerminal = vscode.window.createTerminal({
@@ -205,6 +217,7 @@ async function createWindow() {
   vscode.window.onDidCloseTerminal((terminal) => {
     if (terminal === lazyGitTerminal) {
       lazyGitTerminal = undefined;
+      cleanupIpc();
       onHide();
     }
   });
@@ -349,4 +362,92 @@ function getWorkspaceFolder(): string {
   }
 
   return workspaceFolder?.uri.fsPath ?? os.homedir();
+}
+
+/* --- IPC File Opening --- */
+
+function getDefaultLazygitConfigPath(): string {
+  switch (process.platform) {
+    case "darwin":
+      if (process.env.XDG_CONFIG_HOME) {
+        return path.join(process.env.XDG_CONFIG_HOME, "lazygit", "config.yml");
+      }
+      return path.join(os.homedir(), "Library", "Application Support", "lazygit", "config.yml");
+    case "win32":
+      return path.join(process.env.APPDATA || "", "lazygit", "config.yml");
+    default:
+      return path.join(
+        process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"),
+        "lazygit", "config.yml"
+      );
+  }
+}
+
+function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: string } {
+  const tmpDir = os.tmpdir();
+  const suffix = `${Date.now()}-${process.pid}`;
+
+  const ipcPath = path.join(tmpDir, `lazygit-vscode-ipc-${suffix}.tmp`);
+  fs.writeFileSync(ipcPath, "");
+
+  const overlayYaml = [
+    "os:",
+    `  edit: 'printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"'`,
+    `  editAtLine: 'printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"'`,
+    "promptToReturnFromSubprocess: false",
+    "",
+  ].join("\n");
+
+  const overlayPath = path.join(tmpDir, `lazygit-vscode-config-${suffix}.yml`);
+  fs.writeFileSync(overlayPath, overlayYaml);
+
+  // --use-config-file replaces the default config, so include user config first,
+  // then overlay (later files take priority via lazygit's deep merge)
+  const userConfigPath = globalConfig.configPath || getDefaultLazygitConfigPath();
+  const configFiles: string[] = [];
+  if (fs.existsSync(userConfigPath)) {
+    configFiles.push(userConfigPath);
+  }
+  configFiles.push(overlayPath);
+
+  return { ipcPath, overlayPath, configFileArg: configFiles.join(",") };
+}
+
+function startIpcWatcher(ipcPath: string): fs.FSWatcher {
+  return fs.watch(ipcPath, () => {
+    const content = fs.readFileSync(ipcPath, "utf8").trim();
+    if (content) {
+      handleIpcMessage(content);
+    }
+  });
+}
+
+function handleIpcMessage(line: string) {
+  const parts = line.split("\t");
+  const filePath = parts[0]?.trim();
+  const lineNum = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+
+  if (!filePath) return;
+
+  const uri = vscode.Uri.file(filePath);
+  vscode.workspace.openTextDocument(uri).then(
+    (doc) => {
+      const position = new vscode.Position(Math.max(0, lineNum > 0 ? lineNum - 1 : 0), 0);
+      vscode.window.showTextDocument(doc, {
+        preview: false,
+        selection: new vscode.Range(position, position),
+      });
+    },
+    () => {
+      vscode.window.showErrorMessage(`Failed to open file: ${filePath}`);
+    }
+  );
+}
+
+function cleanupIpc() {
+  if (!ipcState) return;
+  ipcState.watcher.close();
+  fs.unlinkSync(ipcState.ipcPath);
+  fs.unlinkSync(ipcState.overlayPath);
+  ipcState = undefined;
 }

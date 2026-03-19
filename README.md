@@ -12,17 +12,19 @@ https://github.com/tom-pollak/lazygit-vscode/assets/26611948/5924db82-7937-4ed9-
 
 ## VSCode integration
 
-Set the following in your [LazyGit config](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md) for VSCode support:
+File opening works out of the box -- pressing `e` in lazygit opens files directly in VSCode. No manual lazygit config is needed.
+
+Under the hood, the extension automatically configures lazygit's edit commands via an overlay config, using IPC to open files through the VSCode API instead of the `code` CLI.
+
+To disable this and fall back to the `code` CLI approach, set `lazygit-vscode.nativeFileOpening` to `false` and configure your [lazygit config](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md) manually:
 
 ```yaml
 os:
   editPreset: "vscode"
-promptToReturnFromSubprocess: false # removes "press enter to return to lazygit" popup
+promptToReturnFromSubprocess: false
 ```
 
-This allows a [pretty slick](https://github.com/jesseduffield/lazygit/blob/master/docs/Config.md#configuring-file-editing) experience opening windows with `e`
-
-> If you prefer to use a different tool on the cli, you can configure a custom LazyGit config for VSCode with `lazygit-vscode.configPath`
+> You can use `lazygit-vscode.configPath` to set a separate lazygit config for VSCode if you prefer different behaviour between VSCode and CLI.
 
 ### Known Issues
 
@@ -73,10 +75,11 @@ Use the keyboard shortcut `Ctrl+Shift+L` (or `Cmd+Shift+L` on macOS) to toggle L
 
 ### Basic Configuration
 
+- `lazygit-vscode.nativeFileOpening`: Automatically handle file opening from lazygit via IPC (default: `true`). When enabled, pressing `e` opens files directly in VSCode without needing `code` on PATH or `editPreset: "vscode"` in your lazygit config. Set to `false` to fall back to the `code` CLI approach.
 - `lazygit-vscode.lazygitPath`: Manually set LazyGit path. Otherwise use default system PATH.
 - `lazygit-vscode.configPath`: Set custom LazyGit config. Useful if you like different behaviour between VSCode and CLI.
 - `lazygit-vscode.autoMaximizeWindow`: Maximize the lazygit window in the editor (keeps sidebar visible). Useful when working with split editors.
-- `lazygit-vscode.venvActivationDelay`: Delay in milliseconds to wait for Python virtual environment activation before launching lazygit (default: 100). Increase this value if your Python environment takes longer to activate.
+- `lazygit-vscode.venvActivationDelay`: Delay in milliseconds to wait for Python virtual environment activation before launching lazygit (default: 200). Increase this value if your Python environment takes longer to activate.
 
 ### Panel Behavior
 
