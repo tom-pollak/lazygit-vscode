@@ -13,7 +13,7 @@ const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
 let lazyGitTerminal: vscode.Terminal | undefined;
 let globalConfig: LazyGitConfig;
 let globalConfigJSON: string;
-let ipcState: { ipcPath: string; overlayPath: string } | undefined;
+let ipcState: { ipcPath: string; overlayPath: string; watcher: fs.FSWatcher } | undefined;
 
 /* --- Config --- */
 
@@ -161,9 +161,8 @@ async function createWindow() {
 
   if (globalConfig.nativeFileOpening) {
     const ipc = setupIpc();
-    ipcState = ipc;
     configFileArg = ipc.configFileArg;
-    startIpcWatcher(ipc.ipcPath);
+    ipcState = { ...ipc, watcher: startIpcWatcher(ipc.ipcPath) };
   } else {
     // Legacy: find 'code' CLI and add to PATH for lazygit's editPreset
     try {
@@ -406,16 +405,14 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   // editAtLineAndWait, editInTerminal, openDirInEditor, etc. if we don't include them.
   let userOsFields: Record<string, any> = {};
   if (fs.existsSync(userConfigPath)) {
-    try {
-      const parsed = yaml.load(fs.readFileSync(userConfigPath, "utf8")) as Record<string, any> | null;
-      userOsFields = parsed?.os ?? {};
-    } catch {}
+    const parsed = yaml.load(fs.readFileSync(userConfigPath, "utf8")) as Record<string, any> | null;
+    userOsFields = parsed?.os ?? {};
   }
 
   // Override edit and editAtLine with IPC commands
   const osFields = { ...userOsFields };
-  osFields.edit = `printf "%s\\t0\\n" "{{filename}}" >> "${ipcPath}"`;
-  osFields.editAtLine = `printf "%s\\t%s\\n" "{{filename}}" "{{line}}" >> "${ipcPath}"`;
+  osFields.edit = `printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"`;
+  osFields.editAtLine = `printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"`;
 
   const overlayConfig: Record<string, any> = { os: osFields, promptToReturnFromSubprocess: false };
   const overlayYaml = yaml.dump(overlayConfig);
@@ -434,25 +431,11 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   return { ipcPath, overlayPath, configFileArg: configFiles.join(",") };
 }
 
-function startIpcWatcher(ipcPath: string) {
-  let bytesRead = 0;
-
-  fs.watchFile(ipcPath, { interval: 100 }, (curr) => {
-    if (curr.size > bytesRead) {
-      try {
-        const fd = fs.openSync(ipcPath, "r");
-        const buf = Buffer.alloc(curr.size - bytesRead);
-        fs.readSync(fd, buf, 0, buf.length, bytesRead);
-        fs.closeSync(fd);
-        bytesRead = curr.size;
-
-        const lines = buf.toString("utf8").trim().split("\n").filter((l) => l.trim());
-        for (const line of lines) {
-          handleIpcMessage(line);
-        }
-      } catch {
-        // File might have been deleted during cleanup
-      }
+function startIpcWatcher(ipcPath: string): fs.FSWatcher {
+  return fs.watch(ipcPath, () => {
+    const content = fs.readFileSync(ipcPath, "utf8").trim();
+    if (content) {
+      handleIpcMessage(content);
     }
   });
 }
@@ -481,8 +464,8 @@ function handleIpcMessage(line: string) {
 
 function cleanupIpc() {
   if (!ipcState) return;
-  fs.unwatchFile(ipcState.ipcPath);
-  try { fs.unlinkSync(ipcState.ipcPath); } catch {}
-  try { fs.unlinkSync(ipcState.overlayPath); } catch {}
+  ipcState.watcher.close();
+  fs.unlinkSync(ipcState.ipcPath);
+  fs.unlinkSync(ipcState.overlayPath);
   ipcState = undefined;
 }
