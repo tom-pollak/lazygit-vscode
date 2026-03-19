@@ -159,23 +159,15 @@ async function createWindow() {
   let configFileArg: string | undefined;
   const env: { [key: string]: string } = {};
 
+  // Ensure the terminal inherits the extension host's full PATH
+  env.PATH = process.env.PATH || "";
+
   if (globalConfig.nativeFileOpening) {
     const ipc = setupIpc();
     configFileArg = ipc.configFileArg;
     ipcState = { ...ipc, watcher: startIpcWatcher(ipc.ipcPath) };
-  } else {
-    // Legacy: find 'code' CLI and add to PATH for lazygit's editPreset
-    try {
-      const codePath = await findExecutableOnPath("code");
-      env.PATH = `${path.dirname(codePath)}${path.delimiter}${process.env.PATH}`;
-    } catch {
-      vscode.window.showWarningMessage(
-        "Could not find 'code' on PATH. Set `editPreset: \"vscode\"` in your lazygit config and ensure 'code' is available, or enable `lazygit-vscode.nativeFileOpening`."
-      );
-    }
-    if (globalConfig.configPath) {
-      configFileArg = globalConfig.configPath;
-    }
+  } else if (globalConfig.configPath) {
+    configFileArg = globalConfig.configPath;
   }
 
   // Check if Python venv activation is enabled
