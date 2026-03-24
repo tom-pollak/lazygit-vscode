@@ -176,7 +176,8 @@ async function createWindow() {
 
   if (activateEnvironment) {
     // Use default shell so Python extension can inject venv activation
-    let lazyGitCommand = `"${globalConfig.lazyGitPath}"`;
+    const callOperator = process.platform === "win32" ? "& " : "";
+    let lazyGitCommand = `${callOperator}"${globalConfig.lazyGitPath}"`;
     if (configFileArg) {
       lazyGitCommand += ` --use-config-file="${configFileArg}"`;
     }
