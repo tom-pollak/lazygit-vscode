@@ -394,6 +394,7 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
     "os:",
     `  edit: 'printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"'`,
     `  editAtLine: 'printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"'`,
+    "notARepository: skip",
     "promptToReturnFromSubprocess: false",
     "",
   ].join("\n");
