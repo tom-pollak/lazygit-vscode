@@ -329,10 +329,9 @@ function onHide() {
 function findExecutableOnPath(executable: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const workspaceFolder = getWorkspaceFolder();
-    const command =
-      process.platform === "win32"
-        ? `where ${executable}`
-        : `cd "${workspaceFolder}" && which ${executable}`;
+    const command = process.platform === "win32"
+      ? `where ${executable}`
+      : `${process.env.SHELL || "sh"} -lc "which ${executable}"`;
     exec(command, (error, stdout) => {
       if (error) reject(new Error(`${executable} not found on PATH`));
       else resolve(stdout.trim());
