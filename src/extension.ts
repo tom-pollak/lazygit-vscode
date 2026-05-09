@@ -172,7 +172,7 @@ async function createWindow() {
 
   // Check if Python venv activation is enabled
   const pythonConfig = vscode.workspace.getConfiguration("python");
-  const activateEnvironment = pythonConfig.get<boolean>("terminal.activateEnvironment", true);
+  const activateEnvironment = pythonConfig.get<boolean>("terminal.activateEnvironment", false);
 
   if (activateEnvironment) {
     // Use default shell so Python extension can inject venv activation
