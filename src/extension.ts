@@ -6,14 +6,68 @@ import * as process from "process";
 import { exec } from "child_process";
 import assert = require("assert");
 
-
+const LAZYGIT_OPEN_COMMAND = "lazygit-vscode.open";
+const LAZYGIT_SHOW_EXPLORER_COMMAND = "lazygit-vscode.showExplorer";
+const LAZYGIT_SHOW_SEARCH_COMMAND = "lazygit-vscode.showSearch";
+const LAZYGIT_SHOW_DEBUG_COMMAND = "lazygit-vscode.showDebug";
+const LAZYGIT_SHOW_EXTENSIONS_COMMAND = "lazygit-vscode.showExtensions";
 const LAZYGIT_TOGGLE_COMMAND = "lazygit-vscode.toggle";
 const LAZYGIT_CONTEXT_KEY = "lazygitFocus";
+const IPC_COMMAND_PREFIX = "::lazygit-vscode::";
+const IPC_SHOW_EXPLORER = "showExplorer";
+const IPC_SHOW_SEARCH = "showSearch";
+const IPC_SHOW_DEBUG = "showDebug";
+const IPC_SHOW_EXTENSIONS = "showExtensions";
+
+interface WorkbenchViewTarget {
+  command: string;
+  viewCommand: string;
+  ipcCommand: string;
+  lazygitKey: string;
+  description: string;
+}
+
+const WORKBENCH_VIEW_TARGETS: WorkbenchViewTarget[] = [
+  {
+    command: LAZYGIT_SHOW_EXPLORER_COMMAND,
+    viewCommand: "workbench.view.explorer",
+    ipcCommand: IPC_SHOW_EXPLORER,
+    lazygitKey: "<c-e>",
+    description: "Show VSCode Explorer",
+  },
+  {
+    command: LAZYGIT_SHOW_SEARCH_COMMAND,
+    viewCommand: "workbench.view.search",
+    ipcCommand: IPC_SHOW_SEARCH,
+    lazygitKey: "<c-f>",
+    description: "Show VSCode Search",
+  },
+  {
+    command: LAZYGIT_SHOW_DEBUG_COMMAND,
+    viewCommand: "workbench.view.debug",
+    ipcCommand: IPC_SHOW_DEBUG,
+    lazygitKey: "<c-d>",
+    description: "Show VSCode Run and Debug",
+  },
+  {
+    command: LAZYGIT_SHOW_EXTENSIONS_COMMAND,
+    viewCommand: "workbench.view.extensions",
+    ipcCommand: IPC_SHOW_EXTENSIONS,
+    lazygitKey: "<c-x>",
+    description: "Show VSCode Extensions",
+  },
+];
 
 let lazyGitTerminal: vscode.Terminal | undefined;
+let lazyGitOpening: Promise<void> | undefined;
+let lazyGitPanelVisible = false;
+let lazyGitPanelMaximized = false;
 let globalConfig: LazyGitConfig;
 let globalConfigJSON: string;
-let ipcState: { ipcPath: string; overlayPath: string; watcher: fs.FSWatcher } | undefined;
+let ipcState:
+  | { ipcPath: string; overlayPath: string; watcher: fs.FSWatcher }
+  | undefined;
+let terminalCloseSubscription: vscode.Disposable | undefined;
 
 /* --- Config --- */
 
@@ -32,6 +86,7 @@ interface LazyGitConfig {
   panels: PanelOptions;
   venvActivationDelay: number;
   nativeFileOpening: boolean;
+  terminalKeybindingFallback: boolean;
 }
 
 function loadConfig(): LazyGitConfig {
@@ -39,7 +94,7 @@ function loadConfig(): LazyGitConfig {
 
   // Helper function for getting panel behavior with legacy fallback
   function getPanelBehavior(panelName: string): PanelBehavior {
-    const defaultValue = panelName === "secondarySidebar" ? "hide" : "keep";
+    const defaultValue = panelName === "panel" ? "keep" : "hide";
     const newSetting = config.get<PanelBehavior>(
       `panels.${panelName}`,
       defaultValue
@@ -48,9 +103,13 @@ function loadConfig(): LazyGitConfig {
 
     // Legacy fallbacks for published settings
     if (panelName === "sidebar") {
-      return config.get<boolean>("autoHideSideBar", false) ? "hide" : "keep";
+      return config.get<boolean>("autoHideSideBar", false)
+        ? "hide"
+        : defaultValue;
     } else if (panelName === "panel") {
-      return config.get<boolean>("autoHidePanel", false) ? "hide" : "keep";
+      return config.get<boolean>("autoHidePanel", false)
+        ? "hide"
+        : defaultValue;
     }
 
     return defaultValue;
@@ -67,6 +126,10 @@ function loadConfig(): LazyGitConfig {
     },
     venvActivationDelay: config.get<number>("venvActivationDelay", 200),
     nativeFileOpening: config.get<boolean>("nativeFileOpening", true),
+    terminalKeybindingFallback: config.get<boolean>(
+      "terminalKeybindingFallback",
+      true
+    ),
   };
 }
 
@@ -115,27 +178,27 @@ async function loadExtension() {
 /* --- Events --- */
 
 export async function activate(context: vscode.ExtensionContext) {
-  async function toggleLazyGit() {
-    if (lazyGitTerminal) {
-      if (windowFocused()) { // Hide
-        closeWindow();
-        onHide();
-      } else { // Show
-        focusWindow();
-        onShown();
-      }
-    } else { // No lazyGitTerminal, create new one.
-      await createWindow();
-      onShown();
-    }
-  }
-
-  const updateLazyGitFocusContext = () => {
-    vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, windowFocused());
-  };
+  const updateLazyGitFocusContext = () =>
+    setLazyGitFocusContext(isLazyGitTerminalActive());
+  const lazyGitStatusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    100
+  );
+  lazyGitStatusBarItem.name = "LazyGit";
+  lazyGitStatusBarItem.text = "$(source-control) LazyGit";
+  lazyGitStatusBarItem.tooltip = "Open LazyGit";
+  lazyGitStatusBarItem.command = LAZYGIT_OPEN_COMMAND;
+  lazyGitStatusBarItem.show();
 
   context.subscriptions.push(
+    vscode.commands.registerCommand(LAZYGIT_OPEN_COMMAND, openLazyGit),
+    ...WORKBENCH_VIEW_TARGETS.map(({ command, viewCommand }) =>
+      vscode.commands.registerCommand(command, () =>
+        showWorkbenchView(viewCommand).then(undefined, showLazyGitError)
+      )
+    ),
     vscode.commands.registerCommand(LAZYGIT_TOGGLE_COMMAND, toggleLazyGit),
+    lazyGitStatusBarItem,
     vscode.window.onDidChangeActiveTextEditor(updateLazyGitFocusContext),
     vscode.window.onDidChangeActiveTerminal(updateLazyGitFocusContext),
   );
@@ -143,9 +206,58 @@ export async function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
   cleanupIpc();
+  terminalCloseSubscription?.dispose();
+  terminalCloseSubscription = undefined;
 }
 
 /* ---  Window --- */
+
+function openLazyGit() {
+  showLazyGit().then(undefined, showLazyGitError);
+}
+
+async function showWorkbenchView(command: string) {
+  if (lazyGitPanelVisible) {
+    await closeLazyGitPanel();
+    onHide(false);
+  }
+
+  await vscode.commands.executeCommand(command);
+}
+
+async function showLazyGit() {
+  if (lazyGitOpening) {
+    await lazyGitOpening;
+    return;
+  }
+
+  if (lazyGitTerminal) {
+    const shouldMaximize = !lazyGitPanelVisible;
+    focusWindow();
+    await onShown(shouldMaximize);
+    return;
+  }
+
+  lazyGitOpening = createWindow()
+    .then(() => onShown(true))
+    .finally(() => {
+      lazyGitOpening = undefined;
+    });
+  await lazyGitOpening;
+}
+
+async function toggleLazyGit() {
+  if (lazyGitTerminal && lazyGitPanelVisible) {
+    await closeWindow();
+  } else {
+    await showLazyGit();
+  }
+}
+
+function showLazyGitError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  vscode.window.showErrorMessage(`Failed to open LazyGit: ${message}`);
+}
 
 async function createWindow() {
   await reloadIfConfigChange();
@@ -162,7 +274,10 @@ async function createWindow() {
   // Ensure the terminal inherits the extension host's full PATH
   env.PATH = process.env.PATH || "";
 
-  if (globalConfig.nativeFileOpening) {
+  if (
+    globalConfig.nativeFileOpening ||
+    globalConfig.terminalKeybindingFallback
+  ) {
     const ipc = setupIpc();
     configFileArg = ipc.configFileArg;
     ipcState = { ...ipc, watcher: startIpcWatcher(ipc.ipcPath) };
@@ -172,7 +287,10 @@ async function createWindow() {
 
   // Check if Python venv activation is enabled
   const pythonConfig = vscode.workspace.getConfiguration("python");
-  const activateEnvironment = pythonConfig.get<boolean>("terminal.activateEnvironment", false);
+  const activateEnvironment = pythonConfig.get<boolean>(
+    "terminal.activateEnvironment",
+    false
+  );
 
   if (activateEnvironment) {
     // Use default shell so Python extension can inject venv activation
@@ -185,7 +303,7 @@ async function createWindow() {
     lazyGitTerminal = vscode.window.createTerminal({
       name: "LazyGit",
       cwd: workspaceFolder,
-      location: vscode.TerminalLocation.Editor,
+      location: vscode.TerminalLocation.Panel,
       env: env,
     });
 
@@ -207,7 +325,7 @@ async function createWindow() {
       cwd: workspaceFolder,
       shellPath: globalConfig.lazyGitPath,
       shellArgs: shellArgs,
-      location: vscode.TerminalLocation.Editor,
+      location: vscode.TerminalLocation.Panel,
       env: env,
     });
 
@@ -215,20 +333,15 @@ async function createWindow() {
   }
 
   // lazygit window closes, unlink and focus on editor (where lazygit was)
-  vscode.window.onDidCloseTerminal((terminal) => {
+  terminalCloseSubscription?.dispose();
+  terminalCloseSubscription = vscode.window.onDidCloseTerminal((terminal) => {
     if (terminal === lazyGitTerminal) {
       lazyGitTerminal = undefined;
+      lazyGitPanelVisible = false;
       cleanupIpc();
-      onHide();
+      closeLazyGitPanel().then(() => onHide(true), showLazyGitError);
     }
   });
-}
-
-function windowFocused(): boolean {
-  return (
-    vscode.window.activeTextEditor === undefined &&
-    vscode.window.activeTerminal === lazyGitTerminal
-  );
 }
 
 function focusWindow() {
@@ -236,63 +349,53 @@ function focusWindow() {
   lazyGitTerminal.show(false); // false: take focus
 }
 
-function closeWindow() {
-  const openTabs = vscode.window.tabGroups.all.flatMap(
-    (group) => group.tabs
-  ).length;
-  if (openTabs === 1 && lazyGitTerminal) {
-    // only lazygit tab, close
-    lazyGitTerminal.dispose();
-  } else {
-    // toggle recently used tab in group
-    vscode.commands.executeCommand(
-      "workbench.action.openPreviousRecentlyUsedEditorInGroup"
-    );
+function isLazyGitTerminalActive(): boolean {
+  return vscode.window.activeTerminal === lazyGitTerminal;
+}
+
+function setLazyGitFocusContext(value: boolean) {
+  vscode.commands.executeCommand("setContext", LAZYGIT_CONTEXT_KEY, value);
+}
+
+async function closeWindow() {
+  await closeLazyGitPanel();
+  onHide(true);
+}
+
+async function onShown(maximizePanel: boolean) {
+  focusWindow();
+  lazyGitPanelVisible = true;
+  setLazyGitFocusContext(true);
+
+  await vscode.commands.executeCommand("workbench.action.closeSidebar");
+  await vscode.commands.executeCommand("workbench.action.closeAuxiliaryBar");
+
+  if (maximizePanel) {
+    await maximizeLazyGitPanel();
   }
 }
 
-function onShown() {
-  const shouldKeep = (behavior: PanelBehavior) => behavior === "keep";
-  const shouldHide = (behavior: PanelBehavior) =>
-    behavior === "hide" || behavior === "hideRestore";
-
-  if (globalConfig.autoMaximizeWindow) {
-    vscode.commands.executeCommand(
-      "workbench.action.maximizeEditorHideSidebar"
-    );
-
-    // maximizeEditorHideSidebar closes both sidebars. If keep is true, we need to open them again.
-    if (shouldKeep(globalConfig.panels.sidebar)) {
-      vscode.commands.executeCommand(
-        "workbench.action.toggleSidebarVisibility"
-      );
-    }
-    if (shouldKeep(globalConfig.panels.secondarySidebar)) {
-      vscode.commands.executeCommand("workbench.action.toggleAuxiliaryBar");
-      setTimeout(() => {
-        vscode.commands.executeCommand(
-          "workbench.action.focusActiveEditorGroup"
-        );
-      }, 200);
-    }
-  } else {
-    // autoMaximizeWindow: false
-    if (shouldHide(globalConfig.panels.sidebar)) {
-      vscode.commands.executeCommand("workbench.action.closeSidebar");
-    }
-
-    if (shouldHide(globalConfig.panels.secondarySidebar)) {
-      vscode.commands.executeCommand("workbench.action.closeAuxiliaryBar");
-    }
-  }
-
-  // Bottom panel not affected by autoMaximizeWindow
-  if (shouldHide(globalConfig.panels.panel)) {
-    vscode.commands.executeCommand("workbench.action.closePanel");
-  }
+async function maximizeLazyGitPanel() {
+  await vscode.commands.executeCommand("workbench.action.positionPanelBottom");
+  await delay(50);
+  await vscode.commands.executeCommand("workbench.action.alignPanelCenter");
+  await delay(50);
+  await vscode.commands.executeCommand("workbench.action.toggleMaximizedPanel");
+  lazyGitPanelMaximized = true;
 }
 
-function onHide() {
+async function closeLazyGitPanel() {
+  if (lazyGitPanelMaximized) {
+    await vscode.commands.executeCommand("workbench.action.toggleMaximizedPanel");
+    lazyGitPanelMaximized = false;
+  }
+
+  lazyGitPanelVisible = false;
+  setLazyGitFocusContext(false);
+  await vscode.commands.executeCommand("workbench.action.closePanel");
+}
+
+function onHide(focusEditor: boolean) {
   // Restore panels
   const shouldRestore = (behavior: PanelBehavior) => behavior === "hideRestore";
 
@@ -304,18 +407,12 @@ function onHide() {
     vscode.commands.executeCommand("workbench.action.toggleAuxiliaryBar");
   }
 
-  if (shouldRestore(globalConfig.panels.panel)) {
-    vscode.commands.executeCommand("workbench.action.togglePanel");
+  if (!focusEditor) {
+    return;
   }
 
-  // Unmaximize
-  if (globalConfig.autoMaximizeWindow) {
-    vscode.commands.executeCommand("workbench.action.evenEditorWidths");
-  }
-
-  // Editor Focus -- panel / auxiliaryBar will take focus so short delay required
+  // Editor Focus -- auxiliaryBar will take focus so short delay required
   const timeoutValue =
-    globalConfig.panels.panel === "hideRestore" ||
     globalConfig.panels.secondarySidebar === "hideRestore"
       ? 200
       : 0;
@@ -328,10 +425,10 @@ function onHide() {
 
 function findExecutableOnPath(executable: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const workspaceFolder = getWorkspaceFolder();
-    const command = process.platform === "win32"
-      ? `where ${executable}`
-      : `${process.env.SHELL || "sh"} -lc "which ${executable}"`;
+    const command =
+      process.platform === "win32"
+        ? `where ${executable}`
+        : `${process.env.SHELL || "sh"} -lc "which ${executable}"`;
     exec(command, (error, stdout) => {
       if (error) reject(new Error(`${executable} not found on PATH`));
       else resolve(stdout.trim());
@@ -347,6 +444,10 @@ function expandPath(pth: string): string {
     pth = pth.replace(/\$([A-Za-z0-9_]+)/g, (_, n) => process.env[n] || "");
   }
   return pth;
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function getWorkspaceFolder(): string {
@@ -372,7 +473,13 @@ function getDefaultLazygitConfigPath(): string {
       if (process.env.XDG_CONFIG_HOME) {
         return path.join(process.env.XDG_CONFIG_HOME, "lazygit", "config.yml");
       }
-      return path.join(os.homedir(), "Library", "Application Support", "lazygit", "config.yml");
+      return path.join(
+        os.homedir(),
+        "Library",
+        "Application Support",
+        "lazygit",
+        "config.yml"
+      );
     case "win32":
       return path.join(process.env.APPDATA || "", "lazygit", "config.yml");
     default:
@@ -383,17 +490,19 @@ function getDefaultLazygitConfigPath(): string {
   }
 }
 
-function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: string } {
+function setupIpc(): {
+  ipcPath: string;
+  overlayPath: string;
+  configFileArg: string;
+} {
   const tmpDir = os.tmpdir();
   const suffix = `${Date.now()}-${process.pid}`;
 
   const ipcPath = path.join(tmpDir, `lazygit-vscode-ipc-${suffix}.tmp`);
   fs.writeFileSync(ipcPath, "");
-
   const overlayYaml = [
-    "os:",
-    `  edit: 'printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"'`,
-    `  editAtLine: 'printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"'`,
+    ...getNativeFileOpeningYaml(ipcPath),
+    ...getTerminalKeybindingFallbackYaml(ipcPath),
     "notARepository: skip",
     "promptToReturnFromSubprocess: false",
     "",
@@ -404,7 +513,8 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
 
   // --use-config-file replaces the default config, so include user config first,
   // then overlay (later files take priority via lazygit's deep merge)
-  const userConfigPath = globalConfig.configPath || getDefaultLazygitConfigPath();
+  const userConfigPath =
+    globalConfig.configPath || getDefaultLazygitConfigPath();
   const configFiles: string[] = [];
   if (fs.existsSync(userConfigPath)) {
     configFiles.push(userConfigPath);
@@ -414,16 +524,73 @@ function setupIpc(): { ipcPath: string; overlayPath: string; configFileArg: stri
   return { ipcPath, overlayPath, configFileArg: configFiles.join(",") };
 }
 
+function getNativeFileOpeningYaml(ipcPath: string): string[] {
+  if (!globalConfig.nativeFileOpening) {
+    return [];
+  }
+
+  return [
+    "os:",
+    `  edit: 'printf "%s\\t0\\n" "{{filename}}" > "${ipcPath}"'`,
+    `  editAtLine: 'printf "%s\\t%s\\n" "{{filename}}" "{{line}}" > "${ipcPath}"'`,
+  ];
+}
+
+function getTerminalKeybindingFallbackYaml(ipcPath: string): string[] {
+  if (!globalConfig.terminalKeybindingFallback) {
+    return [];
+  }
+
+  return [
+    "keybinding:",
+    "  universal:",
+    "    diffingMenu-alt: '<disabled>'",
+    "    scrollDownMain-alt2: '<disabled>'",
+    "  files:",
+    "    findBaseCommitForFixup: '<disabled>'",
+    "customCommands:",
+    ...WORKBENCH_VIEW_TARGETS.flatMap((target) =>
+      getCustomCommandYaml(ipcPath, target)
+    ),
+  ];
+}
+
+function getCustomCommandYaml(
+  ipcPath: string,
+  target: WorkbenchViewTarget
+): string[] {
+  const command = createIpcWriteCommand(
+    ipcPath,
+    `${IPC_COMMAND_PREFIX}${target.ipcCommand}`
+  );
+
+  return [
+    `  - key: '${target.lazygitKey}'`,
+    "    context: 'global'",
+    `    command: ${toYamlString(command)}`,
+    `    description: '${target.description}'`,
+    "    output: none",
+  ];
+}
+
 function startIpcWatcher(ipcPath: string): fs.FSWatcher {
   return fs.watch(ipcPath, () => {
     const content = fs.readFileSync(ipcPath, "utf8").trim();
-    if (content) {
-      handleIpcMessage(content);
+    if (!content) {
+      return;
     }
+
+    fs.writeFileSync(ipcPath, "");
+    handleIpcMessage(content).then(undefined, showLazyGitError);
   });
 }
 
-function handleIpcMessage(line: string) {
+async function handleIpcMessage(line: string) {
+  if (line.startsWith(IPC_COMMAND_PREFIX)) {
+    await handleIpcCommand(line.slice(IPC_COMMAND_PREFIX.length));
+    return;
+  }
+
   const parts = line.split("\t");
   const filePath = parts[0]?.trim();
   const lineNum = parts.length > 1 ? parseInt(parts[1], 10) : 0;
@@ -431,24 +598,76 @@ function handleIpcMessage(line: string) {
   if (!filePath) return;
 
   const uri = vscode.Uri.file(filePath);
-  vscode.workspace.openTextDocument(uri).then(
-    (doc) => {
-      const position = new vscode.Position(Math.max(0, lineNum > 0 ? lineNum - 1 : 0), 0);
-      vscode.window.showTextDocument(doc, {
-        preview: false,
-        selection: new vscode.Range(position, position),
-      });
-    },
-    () => {
-      vscode.window.showErrorMessage(`Failed to open file: ${filePath}`);
-    }
+  try {
+    await closeLazyGitPanel();
+    onHide(false);
+
+    const doc = await vscode.workspace.openTextDocument(uri);
+    const position = new vscode.Position(
+      Math.max(0, lineNum > 0 ? lineNum - 1 : 0),
+      0
+    );
+    await vscode.window.showTextDocument(doc, {
+      preview: false,
+      selection: new vscode.Range(position, position),
+    });
+  } catch {
+    vscode.window.showErrorMessage(`Failed to open file: ${filePath}`);
+  }
+}
+
+async function handleIpcCommand(command: string) {
+  const target = WORKBENCH_VIEW_TARGETS.find(
+    (viewTarget) => viewTarget.ipcCommand === command
   );
+  if (target) {
+    await showWorkbenchView(target.viewCommand);
+  }
 }
 
 function cleanupIpc() {
   if (!ipcState) return;
   ipcState.watcher.close();
-  fs.unlinkSync(ipcState.ipcPath);
-  fs.unlinkSync(ipcState.overlayPath);
+  unlinkIfExists(ipcState.ipcPath);
+  unlinkIfExists(ipcState.overlayPath);
   ipcState = undefined;
+}
+
+function unlinkIfExists(filePath: string) {
+  try {
+    fs.unlinkSync(filePath);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
+function createIpcWriteCommand(ipcPath: string, payload: string): string {
+  if (process.platform === "win32") {
+    return [
+      "powershell",
+      "-NoProfile",
+      "-ExecutionPolicy Bypass",
+      "-Command",
+      `"Set-Content -LiteralPath ${quotePowerShell(ipcPath)} -Value ${quotePowerShell(payload)} -NoNewline"`,
+    ].join(" ");
+  }
+
+  return `printf '%s\\n' ${quotePosixShell(payload)} > ${quotePosixShell(
+    ipcPath
+  )}`;
+}
+
+function quotePosixShell(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function quotePowerShell(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+function toYamlString(value: string): string {
+  return JSON.stringify(value);
 }

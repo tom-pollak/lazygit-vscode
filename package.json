@@ -1,7 +1,7 @@
 {
   "name": "lazygit-vscode",
   "displayName": "LazyGit VSCode",
-  "description": "Native integration of LazyGit directly in a VSCode window",
+  "description": "Native integration of LazyGit in a maximized VSCode terminal panel",
   "version": "0.1.26",
   "publisher": "TomPollak",
   "engines": {
@@ -13,20 +13,100 @@
   },
   "icon": "logo.png",
   "categories": [],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
+      {
+        "command": "lazygit-vscode.open",
+        "title": "LazyGit: Open"
+      },
+      {
+        "command": "lazygit-vscode.showExplorer",
+        "title": "LazyGit: Show Explorer"
+      },
+      {
+        "command": "lazygit-vscode.showSearch",
+        "title": "LazyGit: Show Search"
+      },
+      {
+        "command": "lazygit-vscode.showDebug",
+        "title": "LazyGit: Show Run and Debug"
+      },
+      {
+        "command": "lazygit-vscode.showExtensions",
+        "title": "LazyGit: Show Extensions"
+      },
       {
         "command": "lazygit-vscode.toggle",
         "title": "LazyGit: Toggle"
       }
     ],
+    "configurationDefaults": {
+      "terminal.integrated.commandsToSkipShell": [
+        "lazygit-vscode.open",
+        "lazygit-vscode.toggle",
+        "lazygit-vscode.showExplorer",
+        "lazygit-vscode.showSearch",
+        "lazygit-vscode.showDebug",
+        "lazygit-vscode.showExtensions"
+      ]
+    },
     "keybindings": [
       {
         "command": "lazygit-vscode.toggle",
         "key": "ctrl+shift+l",
         "mac": "cmd+shift+l"
+      },
+      {
+        "command": "lazygit-vscode.showExplorer",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "terminalFocus && lazygitFocus"
+      },
+      {
+        "command": "lazygit-vscode.showExplorer",
+        "key": "ctrl+e",
+        "mac": "ctrl+e",
+        "when": "terminalFocus && lazygitFocus"
+      },
+      {
+        "command": "lazygit-vscode.showSearch",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
+        "when": "terminalFocus && lazygitFocus"
+      },
+      {
+        "command": "lazygit-vscode.showSearch",
+        "key": "ctrl+f",
+        "mac": "ctrl+f",
+        "when": "terminalFocus && lazygitFocus"
+      },
+      {
+        "command": "lazygit-vscode.showDebug",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "terminalFocus && lazygitFocus"
+      },
+      {
+        "command": "lazygit-vscode.showDebug",
+        "key": "ctrl+d",
+        "mac": "ctrl+d",
+        "when": "terminalFocus && lazygitFocus"
+      },
+      {
+        "command": "lazygit-vscode.showExtensions",
+        "key": "ctrl+shift+x",
+        "mac": "cmd+shift+x",
+        "when": "terminalFocus && lazygitFocus"
+      },
+      {
+        "command": "lazygit-vscode.showExtensions",
+        "key": "ctrl+x",
+        "mac": "ctrl+x",
+        "when": "terminalFocus && lazygitFocus"
       }
     ],
     "configuration": {
@@ -53,12 +133,12 @@
                 "hide",
                 "hideRestore"
               ],
-              "default": "keep",
-              "description": "Sidebar behavior when showing lazygit",
+              "default": "hide",
+              "description": "Sidebar restore behavior. LazyGit always hides the primary sidebar while shown.",
               "enumDescriptions": [
-                "Keep sidebar as is",
-                "Hide sidebar when showing lazygit",
-                "Hide sidebar when showing lazygit and restore when closing"
+                "Do not restore the primary sidebar when LazyGit closes",
+                "Do not restore the primary sidebar when LazyGit closes",
+                "Restore the primary sidebar when LazyGit closes"
               ]
             },
             "panel": {
@@ -69,7 +149,8 @@
                 "hideRestore"
               ],
               "default": "keep",
-              "description": "Panel behavior when showing lazygit",
+              "description": "Deprecated. LazyGit now runs in the terminal panel, so this setting is ignored.",
+              "markdownDeprecationMessage": "**Deprecated**: LazyGit now runs in the terminal panel, so this setting is ignored.",
               "enumDescriptions": [
                 "Keep panel as is",
                 "Hide panel when showing lazygit",
@@ -84,11 +165,11 @@
                 "hideRestore"
               ],
               "default": "hide",
-              "description": "Secondary sidebar behavior when showing lazygit",
+              "description": "Secondary sidebar restore behavior. LazyGit always hides the secondary sidebar while shown.",
               "enumDescriptions": [
-                "Keep secondary sidebar as is",
-                "Hide secondary sidebar when showing lazygit",
-                "Hide secondary sidebar when showing lazygit and restore when closing"
+                "Do not restore the secondary sidebar when LazyGit closes",
+                "Do not restore the secondary sidebar when LazyGit closes",
+                "Restore the secondary sidebar when LazyGit closes"
               ]
             }
           }
@@ -99,11 +180,18 @@
           "scope": "window",
           "default": true
         },
+        "lazygit-vscode.terminalKeybindingFallback": {
+          "type": "boolean",
+          "description": "Inject temporary LazyGit custom commands for Ctrl+E, Ctrl+F, Ctrl+D, and Ctrl+X so VSCode views can still be opened when the integrated terminal sends control-letter shortcuts into LazyGit instead of VSCode.",
+          "scope": "window",
+          "default": true
+        },
         "lazygit-vscode.autoMaximizeWindow": {
           "type": "boolean",
-          "description": "Maximize the lazygit window in editor",
+          "description": "Deprecated. LazyGit now opens in a maximized terminal panel.",
           "scope": "window",
-          "default": false
+          "default": false,
+          "markdownDeprecationMessage": "**Deprecated**: LazyGit now opens in a maximized terminal panel."
         },
         "lazygit-vscode.venvActivationDelay": {
           "type": "number",
@@ -121,7 +209,7 @@
           "type": "boolean",
           "description": "Auto-hide the panel when showing lazygit",
           "scope": "window",
-          "markdownDeprecationMessage": "**Deprecated**: Use `panels.panel: \"hide\"` or `panels.panel: \"hideRestore\"` instead"
+          "markdownDeprecationMessage": "**Deprecated**: LazyGit now runs in the terminal panel, so this setting is ignored."
         }
       }
     }
