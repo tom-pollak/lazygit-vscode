@@ -14,6 +14,7 @@ let lazyGitTerminal: vscode.Terminal | undefined;
 let globalConfig: LazyGitConfig;
 let globalConfigJSON: string;
 let ipcState: { ipcPath: string; overlayPath: string; watcher: fs.FSWatcher } | undefined;
+let ipcHandling: boolean;
 
 /* --- Config --- */
 
@@ -424,6 +425,9 @@ function startIpcWatcher(ipcPath: string): fs.FSWatcher {
 }
 
 function handleIpcMessage(line: string) {
+  if(ipcHandling) return;  // Guard to ensure we don't run the callback twice for the same file
+  ipcHandling = true;
+
   const parts = line.split("\t");
   const filePath = parts[0]?.trim();
   const lineNum = parts.length > 1 ? parseInt(parts[1], 10) : 0;
@@ -438,11 +442,13 @@ function handleIpcMessage(line: string) {
         preview: false,
         selection: new vscode.Range(position, position),
       });
+      onHide();
     },
     () => {
       vscode.window.showErrorMessage(`Failed to open file: ${filePath}`);
     }
   );
+  setTimeout(() => { ipcHandling = false; }, 1000);
 }
 
 function cleanupIpc() {
