@@ -2,6 +2,9 @@ name: Build VSIX
 
 on:
   workflow_dispatch:
+  push:
+      branches:
+        - ci/publish-to-registries
 
 jobs:
   build:
