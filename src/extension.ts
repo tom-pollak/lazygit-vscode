@@ -448,7 +448,7 @@ function handleIpcMessage(line: string) {
       vscode.window.showErrorMessage(`Failed to open file: ${filePath}`);
     }
   );
-  setTimeout(() => { ipcHandling = false; }, 1000);
+  setImmediate(() => { ipcHandling = false; });
 }
 
 function cleanupIpc() {
