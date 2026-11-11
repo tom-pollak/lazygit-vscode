@@ -454,9 +454,11 @@ function handleIpcMessage(line: string) {
 function cleanupIpc() {
   if (!ipcState) return;
   const { watcher, ipcPath, overlayPath } = ipcState;
+  // Clear state first so a failing cleanup can't block every later open (#47).
   ipcState = undefined;
 
   watcher.close();
+  // force: the OS may have already removed these from the temp dir
   fs.rmSync(ipcPath, { force: true });
   fs.rmSync(overlayPath, { force: true });
 }
