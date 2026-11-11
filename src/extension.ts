@@ -453,8 +453,10 @@ function handleIpcMessage(line: string) {
 
 function cleanupIpc() {
   if (!ipcState) return;
-  ipcState.watcher.close();
-  fs.unlinkSync(ipcState.ipcPath);
-  fs.unlinkSync(ipcState.overlayPath);
+  const { watcher, ipcPath, overlayPath } = ipcState;
   ipcState = undefined;
+
+  watcher.close();
+  fs.rmSync(ipcPath, { force: true });
+  fs.rmSync(overlayPath, { force: true });
 }
